@@ -1,0 +1,12 @@
+../Drivers/CMSIS/Include/core_cm3.h:1762:34:__NVIC_SystemReset	1
+../Core/Src/main.c:113:6:HAL_TIM_PeriodElapsedCallback	4
+../Core/Src/main.c:127:6:enable_simcom	1
+../Core/Src/main.c:140:6:led_status	5
+../Core/Src/main.c:160:6:check_handle_state	16
+../Core/Src/main.c:254:5:main	1
+../Core/Src/main.c:309:6:SystemClock_Config	3
+../Core/Src/main.c:347:13:MX_IWDG_Init	2
+../Core/Src/main.c:375:13:MX_TIM6_Init	3
+../Core/Src/main.c:413:13:MX_USART1_UART_Init	2
+../Core/Src/main.c:446:13:MX_GPIO_Init	1
+../Core/Src/main.c:516:6:Error_Handler	1
