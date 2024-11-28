@@ -1,3 +1,0 @@
-../Core/Src/connectivity.c:20:6:send_to_simcom_a76xx	16	static
-../Core/Src/connectivity.c:26:6:HAL_UARTEx_RxEventCallback	24	static
-../Core/Src/connectivity.c:76:6:create_JSON	24	static

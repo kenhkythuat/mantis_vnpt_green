@@ -1,5 +1,0 @@
-../Core/Src/status_coild.c:23:6:reset_flash	40	static
-../Core/Src/status_coild.c:35:6:read_flash_payload	16	static
-../Core/Src/status_coild.c:44:10:read_page	16	static
-../Core/Src/status_coild.c:49:6:write_flash	24	static
-../Core/Src/status_coild.c:56:6:write_load_statues	16	static
