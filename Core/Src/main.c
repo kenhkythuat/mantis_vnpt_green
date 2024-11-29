@@ -162,7 +162,7 @@ void check_handle_state(enum GmsModemState status)
     switch (status) {
     case Off: {
         enable_simcom();
-        //MX_IWDG_Init();
+        MX_IWDG_Init();
         is_pb_done = wait_for_pb_done_event();
         if (is_pb_done) {
             current_status_simcom = On;
@@ -278,7 +278,7 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM6_Init();
   MX_USART1_UART_Init();
-  MX_IWDG_Init();
+  //MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
   printf("-----Welcome to Agriconnect-----\n");
   printf("-----Hello Mantis-----\n");

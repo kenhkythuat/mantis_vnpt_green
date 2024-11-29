@@ -188,6 +188,7 @@ bool subscribe_mqtt_via_gsm(void)
             return false;
         }
     }
+    HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, SET);
     return true;
 }
 
@@ -315,6 +316,7 @@ void restart_stm32(void)
 
 bool wait_for_pb_done_event(void)
 {
+    HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, RESET);
     previousTick = HAL_GetTick();
     while (is_inital_check == 0 && previousTick + timeout_pb_done > HAL_GetTick()) {
         if (strstr((char *)rx_data_sim, "PB DONE")) {
