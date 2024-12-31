@@ -48,7 +48,7 @@ extern "C" {
 /* USER CODE BEGIN EM */
 #include "stdbool.h"
 float Level_Pin (void);
-void write_load_statues();
+void write_status_load();
 void reset_flash(uint32_t numberpages);
 void write_flash(int move ,uint32_t Data);
 uint32_t read_page();
@@ -85,7 +85,7 @@ extern bool check_error_mqtt_via_gsm(void);
 extern bool send_payload_signal_to_server(void);
 extern void restart_stm32(void);
 extern bool wait_for_pb_done_event(void);
-extern void read_flash_payload(void);
+extern void control_vavle_form_flash(void);
 extern void led_status(char cmd);
 
 /* USER CODE END EFP */
@@ -125,7 +125,7 @@ extern void led_status(char cmd);
 /* USER CODE BEGIN Private defines */
 extern char rx_buffer[1500];
 extern char rx_data_sim[1500];
-extern char array_at_command[200];
+extern char array_at_command[400];
 extern int is_pb_done;
 extern int isATOK;
 extern int on_relay;
@@ -147,6 +147,7 @@ extern bool is_acquiered_mqtt;
 extern bool is_updated_status;
 extern GPIO_TypeDef* GPIO_LOAD_PORT[10];
 extern unsigned int GPIO_LOAD_PIN[10];
+extern bool check_mqtt_signal_after_restart;
 enum GmsModemState
 {
 	Off,
