@@ -32,7 +32,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
       rx_data_sim[i] = rx_buffer[i];
       if ((char)rx_buffer[i] == (char)SERIAL_NUMBER[5] &&
           (char)rx_buffer[i + 1] == (char)SERIAL_NUMBER[6] &&
-          (char)rx_buffer[i + 2] == (char)SERIAL_NUMBER[7]) {
+          (char)rx_buffer[i + 2] == (char)SERIAL_NUMBER[7]&&current_status_simcom == Subscribed) {
         load_port = (rx_buffer[i + 4] - 48);
         pin_1x = (rx_buffer[(81)] - 48);
         if (pin_1x == 0) {
@@ -44,6 +44,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
         if (rx_buffer[(i + 31)] == 49 && is_pb_done == true)
 #elif SIMCOM_MODEL == a7670sa
         if (rx_buffer[(i + 29)] == 49 && is_pb_done == true)
+#elif SIMCOM_MODEL == a7080
+        if (rx_buffer[(i + 8)] == 49 && is_pb_done == true)
 #endif
         {
           printf("-----------ON RELAY %d -----------\r\n", load_port);
@@ -57,6 +59,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
         if (rx_buffer[(i + 31)] == 48 && is_pb_done == true)
 #elif SIMCOM_MODEL == a7670sa
         if (rx_buffer[(i + 29)] == 48 && is_pb_done == true)
+#elif SIMCOM_MODEL == a7080
+        if (rx_buffer[(i + 8)] == 48 && is_pb_done == true)
 #endif
         {
           printf("-----------OFF RELAY %d -----------\r\n", load_port);

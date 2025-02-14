@@ -31,7 +31,16 @@ int timeout_pb_done = 60000;
 int read_signal_quality(void) {
   send_to_simcom_a76xx("AT+CSQ\r\n");
   HAL_Delay(200);
-  signal_strength = (rx_data_sim[8] - 48) * 10 + (rx_data_sim[9] - 48);
+  int signal, error;
+  char *ptr = strstr(rx_data_sim, "+CSQ:");
+  if (ptr&&sscanf(ptr, "+CSQ: %d,%d", &signal, &error) == 2) {
+      printf("Cuong do tin hieu: %d\n", signal);
+      printf("Gia tri loi: %d\n", error);
+  } else {
+      printf("khong the phan tich chuoi @@ !\n");
+  }
+//  signal_strength = (rx_data_sim[8] - 48) * 10 + (rx_data_sim[9] - 48);
+  signal_strength=signal;
   if (signal_strength >= 31) {
     rssi = -51;
   } else if (signal_strength <= 0) {
@@ -43,7 +52,7 @@ int read_signal_quality(void) {
 }
 
 bool check_signal_simcom(void) {
-  led_status('B');
+  led_status('R');
   printf("-----------------check_signal_simcom------------------\n");
   send_to_simcom_a76xx("ATE0\r\n");
   HAL_Delay(200);
@@ -63,8 +72,6 @@ bool check_signal_simcom(void) {
   } else
     return false;
   HAL_Delay(200);
-  send_to_simcom_a76xx("AT+CGREG?\r\n");
-  HAL_Delay(200);
   send_to_simcom_a76xx("AT+CREG?\r\n");
   HAL_Delay(200);
   if (strstr((char *)rx_data_sim, "+CREG: 0,1") ||
@@ -79,9 +86,9 @@ bool check_signal_simcom(void) {
   HAL_Delay(200);
   send_to_simcom_a76xx("AT+CGREG?\r\n");
   HAL_Delay(200);
-
-  if (strstr((char *)rx_data_sim, "+CGREG: 0,1")||strstr((char *)rx_data_sim, "+CGREG: 0,2")) {
+  if (strstr((char *)rx_data_sim, "+CGREG: 0,1")) {
     printf("-----------------Network registration OK!------------------\n");
+    led_status('B');
   } else
     return false;
   return true;
@@ -89,42 +96,50 @@ bool check_signal_simcom(void) {
 
 bool enable_mqtt_on_gsm_modem(void) {
   is_enable_mqtt = false;
-  send_to_simcom_a76xx("AT+CMQTTSTART\r\n");
-  HAL_Delay(400);
-//  send_to_simcom_a76xx("AT+CNACT=0,1\r\n");
-//  HAL_Delay(400);
-//  send_to_simcom_a76xx("AT+CNACT?\r\n");
-//  HAL_Delay(400);
-//  send_to_simcom_a76xx("AT+SMCONF=\"URL\",\"mqtt.agriconnect.vn\",1883\r\n");
-//  HAL_Delay(400);
-//  send_to_simcom_a76xx("AT+SMCONF=\"KEEPTIME\",600\r\n");
-//  HAL_Delay(400);
-//  send_to_simcom_a76xx("AT+SMCONF=\"CLIENTID\",\"sw000195\"\r\n");
-//  HAL_Delay(400);
-//  send_to_simcom_a76xx("AT+SMCONF=\"USERNAME\",\"mqttnode\"\r\n");
-//  HAL_Delay(400);
-//  send_to_simcom_a76xx("AT+SMCONF=\"PASSWORD\",\"congamo\"\r\n");
-//  HAL_Delay(400);
-//  send_to_simcom_a76xx("AT+SMCONF=\"CLEANSS\",1\r\n");
-//  HAL_Delay(400);
-//  send_to_simcom_a76xx("AT+SMCONF?\r\n");
-//  HAL_Delay(400);
-//  memset(rx_data_sim, '\0', 1500);
-//  HAL_Delay(400);
-//  send_to_simcom_a76xx("AT+SMCONN\r\n");
-//  HAL_Delay(7000);
-//  if ((strstr((char *)rx_data_sim, "OK") != NULL)) {
-//    printf("----------Service have started SIMCOM 7080G successfully------------\n");
-//    is_connected_mqtt=1;
-//    return true;
-//  }
-  if ((strstr((char *)rx_data_sim, "+CMQTTSTART: 0") != NULL)) {
-    printf("----------Service have started successfully------------\n");
-    return true;
-  } else {
-    printf("----------------- Start MQTT service fail------------------\n");
-    return false;
-  }
+#if SIMCOM_MODEL == a7080
+    send_to_simcom_a76xx("AT+CNACT=0,1\r\n");
+    HAL_Delay(400);
+    send_to_simcom_a76xx("AT+CNACT?\r\n");
+    HAL_Delay(400);
+    send_to_simcom_a76xx("AT+SMCONF=\"URL\",\"mqtt.agriconnect.vn\",1883\r\n");
+    HAL_Delay(400);
+    send_to_simcom_a76xx("AT+SMCONF=\"KEEPTIME\",600\r\n");
+    HAL_Delay(400);
+    sprintf(array_at_command,"AT+SMCONF=\"CLIENTID\",\"%s\"\r\n", MQTT_CLIENT_ID);
+	send_to_simcom_a76xx(array_at_command);
+	HAL_Delay(400);
+    sprintf(array_at_command,"AT+SMCONF=\"USERNAME\",\"%s\"\r\n", MQTT_USER);
+	send_to_simcom_a76xx(array_at_command);
+//    send_to_simcom_a76xx("AT+SMCONF=\"USERNAME\",\"mqttnode\"\r\n");
+    HAL_Delay(400);
+    sprintf(array_at_command,"AT+SMCONF=\"PASSWORD\",\"%s\"\r\n", MQTT_PASS);
+	send_to_simcom_a76xx(array_at_command);
+//    send_to_simcom_a76xx("AT+SMCONF=\"PASSWORD\",\"congamo\"\r\n");
+    HAL_Delay(400);
+    send_to_simcom_a76xx("AT+SMCONF=\"CLEANSS\",1\r\n");
+    HAL_Delay(400);
+    send_to_simcom_a76xx("AT+SMCONF?\r\n");
+    HAL_Delay(400);
+    memset(rx_data_sim, '\0', 1500);
+    HAL_Delay(400);
+    send_to_simcom_a76xx("AT+SMCONN\r\n");
+    HAL_Delay(7000);
+    if ((strstr((char *)rx_data_sim, "OK") != NULL)) {
+      printf("----------Service have started SIMCOM 7080G successfully------------\n");
+      is_connected_mqtt=1;
+      return true;
+    }
+#else
+    send_to_simcom_a76xx("AT+CMQTTSTART\r\n");
+    HAL_Delay(400);
+    if ((strstr((char *)rx_data_sim, "+CMQTTSTART: 0") != NULL)) {
+      printf("----------Service have started successfully------------\n");
+      return true;
+    } else {
+      printf("----------------- Start MQTT service fail------------------\n");
+      return false;
+    }
+#endif
   return false;
 }
 
@@ -190,52 +205,79 @@ bool connect_mqtt_server_by_gsm(void) {
 }
 
 bool subscribe_mqtt_via_gsm(void) {
-  sprintf(array_at_command, "%s/snac/%s/#", FARM, SERIAL_NUMBER);
-  sprintf(array_at_command, "AT+CMQTTSUBTOPIC=0,%d,1\r\n",
-          (int)strlen(array_at_command));
-  send_to_simcom_a76xx(array_at_command);
-  HAL_Delay(500);
-  sprintf(array_at_command,"%s/snac/%s/#", FARM, SERIAL_NUMBER);
-  send_to_simcom_a76xx(array_at_command);
-  HAL_Delay(500);
-  if (strstr((char *)rx_data_sim, "OK") != NULL) {
-    printf("-----------------Subscribe Topic Success------------------\n");
-    is_at_subcribe_topic_mqtt = true;
-  } else {
-    printf("-----------------Subscribe Topic Fail------------------\n");
-    is_at_subcribe_topic_mqtt = false;
-  }
-  if (is_at_subcribe_topic_mqtt == true) {
-    send_to_simcom_a76xx("AT+CMQTTSUB=0\r\n");
-    HAL_Delay(500);
-    if (strstr((char *)rx_data_sim, "+CMQTTSUB: 0,0") != NULL) {
-      printf("-----------------Subscribe Success !------------------\n");
-      is_at_subcribe_mqtt = true;
-    } else {
-      printf("-----------------Subscribe Fail !------------------\n");
-      is_at_subcribe_mqtt = false;
-      return false;
-    }
-  }
-//	  memset(rx_data_sim, '\0', 1500);
-//	  HAL_Delay(400);
-//	char temp_buffer[200];
-//	sprintf(temp_buffer, "\"%s/snac/%s/#\"", FARM, SERIAL_NUMBER);
-//	sprintf(array_at_command, "AT+SMSUB=%s,0\r\n",temp_buffer);
-//	send_to_simcom_a76xx(array_at_command);
-//	HAL_Delay(7000);
-//	  if (strstr((char *)rx_data_sim, "OK") != NULL) {
-//	    printf("\n-----------------Subscribe Topic Success------------------\n");
-//	    is_at_subcribe_topic_mqtt = true;
-//	  }
-  HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, SET);
-  return true;
+#if SIMCOM_MODEL == a7080
+	memset(rx_data_sim, '\0', 1500);
+	HAL_Delay(400);
+  	char temp_buffer[200];
+  	sprintf(temp_buffer, "\"%s/snac/%s/#\"", FARM, SERIAL_NUMBER);
+  	sprintf(array_at_command, "AT+SMSUB=%s,0\r\n",temp_buffer);
+  	send_to_simcom_a76xx(array_at_command);
+  	HAL_Delay(3000);
+  	  if (strstr((char *)rx_data_sim, "OK") != NULL) {
+  	    printf("\n-----------------Subscribe Topic Success------------------\n");
+  	    is_at_subcribe_topic_mqtt = true;
+  	  HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, SET);
+  	  return true;
+  	  }
+	else {
+		printf("-----------------Subscribe Fail !------------------\n");
+		is_at_subcribe_mqtt = false;
+		return false;
+	}
+#else
+	  sprintf(array_at_command, "%s/snac/%s/#", FARM, SERIAL_NUMBER);
+	  sprintf(array_at_command, "AT+CMQTTSUBTOPIC=0,%d,1\r\n",
+			  (int)strlen(array_at_command));
+	  send_to_simcom_a76xx(array_at_command);
+	  HAL_Delay(500);
+	  sprintf(array_at_command,"%s/snac/%s/#", FARM, SERIAL_NUMBER);
+	  send_to_simcom_a76xx(array_at_command);
+	  HAL_Delay(500);
+	  if (strstr((char *)rx_data_sim, "OK") != NULL) {
+		printf("-----------------Subscribe Topic Success------------------\n");
+		is_at_subcribe_topic_mqtt = true;
+	  } else {
+		printf("-----------------Subscribe Topic Fail------------------\n");
+		is_at_subcribe_topic_mqtt = false;
+	  }
+	  if (is_at_subcribe_topic_mqtt == true) {
+		send_to_simcom_a76xx("AT+CMQTTSUB=0\r\n");
+		HAL_Delay(500);
+		if (strstr((char *)rx_data_sim, "+CMQTTSUB: 0,0") != NULL) {
+		  printf("-----------------Subscribe Success !------------------\n");
+		  is_at_subcribe_mqtt = true;
+		} else {
+		  printf("-----------------Subscribe Fail !------------------\n");
+		  is_at_subcribe_mqtt = false;
+		  return false;
+		}
+	  }
+	  HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, SET);
+	  return true;
+#endif
+
 }
 
 bool publish_mqtt_via_gsm(void) {
   //  is used to input the topic of a publish message
   led_status('W');
   create_JSON();
+#if SIMCOM_MODEL == a7080
+  	sprintf(array_at_command, "AT+SMPUB=\"%s\",%d,0,0\r\n",MQTT_TOPIC_ACTUATOR_STATUS,strlen(array_json));
+	send_to_simcom_a76xx(array_at_command);
+	HAL_Delay(300);
+	sprintf(array_at_command, "%s\r\n",array_json);
+	send_to_simcom_a76xx(array_at_command);
+	HAL_Delay(1000);
+	  if (strstr((char *)rx_data_sim, "OK") != NULL) {
+		  printf("-----------------Publish Success to server Agriconnect !------------------\n");
+	      led_status('G');
+	      HAL_Delay(1000);
+		  return true;
+	  }
+	  else
+		  printf("-----------------Publish fail !------------------\n");
+#else
   sprintf(array_at_command, "AT+CMQTTTOPIC=0,%d\r\n",
           strlen(MQTT_TOPIC_ACTUATOR_STATUS));
   send_to_simcom_a76xx(array_at_command);
@@ -283,51 +325,62 @@ bool publish_mqtt_via_gsm(void) {
       }
     }
   }
+#endif
   return false;
 }
 
 bool stop_mqtt_via_gsm(void) {
-  send_to_simcom_a76xx("AT+CMQTTDISC?\r\n");
-  HAL_Delay(500);
-  if (strstr((char *)rx_data_sim, "+CMQTTDISC: 0,0") != NULL) {
-    printf("----------------- Connection! ------------------\n");
-    is_at_check_dis_mqtt = true;
-  } else {
-    printf("----------------- Disconnect! ------------------\n");
-    is_at_check_dis_mqtt = false;
-    is_at_disconnect_mqtt = true;
-  }
-  if (is_at_check_dis_mqtt) {
-    send_to_simcom_a76xx("AT+CMQTTDISC=0,120\r\n");
-    HAL_Delay(500);
-    if (strstr((char *)rx_data_sim, "+CMQTTDISC: 0,0") != NULL) {
-      printf("----------------- Disconnect successfully! ------------------\n");
-      is_at_disconnect_mqtt = true;
-    } else
-      return false;
-  }
-  if (is_at_disconnect_mqtt) {
-    send_to_simcom_a76xx("AT+CMQTTREL=0\r\n");
-    HAL_Delay(500);
+#if SIMCOM_MODEL == a7080
+	send_to_simcom_a76xx("AT+SMDISC\r\n");
     if (strstr((char *)rx_data_sim, "OK") != NULL) {
-      printf("--------------- Release a MQTT client successfully! "
-             "-----------------\n");
-      is_at_rel_mqtt = true;
-    } else
-      return false;
-  }
-  if (is_at_rel_mqtt) {
-    send_to_simcom_a76xx("AT+CMQTTSTOP\r\n");
-    HAL_Delay(500);
-    if (strstr((char *)rx_data_sim, "OK") != NULL) {
-      printf("----------------- Stop MQTT service successfully! "
-             "------------------\n");
-      is_at_stop_mqtt = true;
+      printf("-------- Disconnect MQTT successfully------------\n");
       return true;
-    } else
-      return false;
-  }
-  return false;
+    }
+    else return false;
+#else
+	  send_to_simcom_a76xx("AT+CMQTTDISC?\r\n");
+	  HAL_Delay(500);
+	  if (strstr((char *)rx_data_sim, "+CMQTTDISC: 0,0") != NULL) {
+	    printf("----------------- Connection! ------------------\n");
+	    is_at_check_dis_mqtt = true;
+	  } else {
+	    printf("----------------- Disconnect! ------------------\n");
+	    is_at_check_dis_mqtt = false;
+	    is_at_disconnect_mqtt = true;
+	  }
+	  if (is_at_check_dis_mqtt) {
+	    send_to_simcom_a76xx("AT+CMQTTDISC=0,120\r\n");
+	    HAL_Delay(500);
+	    if (strstr((char *)rx_data_sim, "+CMQTTDISC: 0,0") != NULL) {
+	      printf("----------------- Disconnect successfully! ------------------\n");
+	      is_at_disconnect_mqtt = true;
+	    } else
+	      return false;
+	  }
+	  if (is_at_disconnect_mqtt) {
+	    send_to_simcom_a76xx("AT+CMQTTREL=0\r\n");
+	    HAL_Delay(500);
+	    if (strstr((char *)rx_data_sim, "OK") != NULL) {
+	      printf("--------------- Release a MQTT client successfully! "
+	             "-----------------\n");
+	      is_at_rel_mqtt = true;
+	    } else
+	      return false;
+	  }
+	  if (is_at_rel_mqtt) {
+	    send_to_simcom_a76xx("AT+CMQTTSTOP\r\n");
+	    HAL_Delay(500);
+	    if (strstr((char *)rx_data_sim, "OK") != NULL) {
+	      printf("----------------- Stop MQTT service successfully! "
+	             "------------------\n");
+	      is_at_stop_mqtt = true;
+	      return true;
+	    } else
+	      return false;
+	  }
+	  return false;
+#endif
+
 }
 
 bool send_payload_signal_to_server(void) {
@@ -357,41 +410,44 @@ bool wait_for_pb_done_event(void) {
   previousTick = HAL_GetTick();
   while (is_inital_check == 0 &&
          previousTick + timeout_pb_done > HAL_GetTick()) {
-	  HAL_Delay(7000);
+#if SIMCOM_MODEL == a7080
+//	  HAL_Delay(7000);
+	  send_to_simcom_a76xx("AT+CFGRI=1\r\n");
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("ATE0\r\n");
 	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CFUN?\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CGDCONT?\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("ATI\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CGREG?\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CBAND?\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("ATE0\r\n");
 	  HAL_Delay(200);
-//	  send_to_simcom_a76xx("AT+CCID\r\n");
-//	  HAL_Delay(500);
+	  send_to_simcom_a76xx("AT+CCID\r\n");
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CNSMOD?\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("ATI\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CICCID\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CNMP=2\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CNMP?\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CMNB=2\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CMNB?\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+COPS=0\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+COPS?\r\n");
-	  HAL_Delay(500);
+	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CSQ\r\n");
 	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CBANDCFG=\"NB-IOT\",1,3,4,5,8,13,18,19,20,25,26,28,66,71,85\r\n");
@@ -400,17 +456,15 @@ bool wait_for_pb_done_event(void) {
 	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CGNAPN\r\n");
 	  HAL_Delay(200);
-//	  send_to_simcom_a76xx("AT+CGATT=1\r\n");
-//	  HAL_Delay(2000);
 	  send_to_simcom_a76xx("AT+CGATT?\r\n");
 	  HAL_Delay(200);
-	  send_to_simcom_a76xx("AT+CGDCONT=1,\"IP\",\"m-nbiot\"\r\n");
-	  HAL_Delay(1000);
-	  send_to_simcom_a76xx("AT+CGDCONT?\r\n");
+//	  send_to_simcom_a76xx("AT+CGDCONT=1,\"IP\",\"m-nbiot\"\r\n");
+//	  HAL_Delay(1000);
+//	  send_to_simcom_a76xx("AT+CGDCONT?\r\n");
 	  HAL_Delay(500);
 	  return true;
+#endif
     if (strstr((char *)rx_data_sim, "PB DONE")) {
-      led_status('B');
       return true;
     }
 #if SIMCOM_MODEL == a7677

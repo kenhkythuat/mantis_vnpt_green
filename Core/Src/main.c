@@ -149,21 +149,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 void enable_simcom(void) {
   led_status('R');
   printf("Enable SIMCOM\n");
-  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
-  HAL_Delay(3300);
-  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
-  HAL_Delay(3300);
-  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
-  HAL_Delay(200);
-  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
-  HAL_Delay(1000);
+#if SIMCOM_MODEL == a7080
+	send_to_simcom_a76xx("AT+CPOWD=1\r\n");
+	HAL_Delay(5000);
+	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
+	HAL_Delay(4000);
+	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
+	HAL_Delay(4000);
+#else
+	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
+	HAL_Delay(3300);
+	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
+	HAL_Delay(3300);
+	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
+	HAL_Delay(200);
+	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
+	HAL_Delay(1000);
+#endif
 
-//  send_to_simcom_a76xx("AT+CPOWD=1\r\n");
-//  HAL_Delay(5000);
-//  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
-//  HAL_Delay(4000);
-//  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
-//  HAL_Delay(4000);
+
+
 }
 void led_status(char cmd) {
   if (cmd == 'R') {
@@ -208,13 +213,14 @@ void check_handle_state(enum GmsModemState status) {
     } else {
       total_errors++;
     }
-    if (total_errors > 3) {
+    if (total_errors > 5) {
       restart_stm32();
     }
     break;
   }
   case InternetReady: {
     is_enable_mqtt = enable_mqtt_on_gsm_modem();
+#if SIMCOM_MODEL != a7080
     if (is_enable_mqtt) {
       is_acquiered_mqtt = acquire_gsm_mqtt_client();
     } else {
@@ -223,6 +229,7 @@ void check_handle_state(enum GmsModemState status) {
     if (is_acquiered_mqtt) {
       is_connected_mqtt = connect_mqtt_server_by_gsm();
     }
+#endif
     if (is_connected_mqtt) {
       total_errors = 0;
       led_status('G');
