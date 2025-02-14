@@ -38,12 +38,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
         if (pin_1x == 0) {
           load_port = 10;
         }
-#if SIMCOM_MODEL == a7672s
+#if SIMCOM_MODEL == a7672s || SIMCOM_MODEL == a7680 || SIMCOM_MODEL == a7670sa
         if (rx_buffer[(i + 29)] == 49 && is_pb_done == true)
 #elif SIMCOM_MODEL == a7670c
         if (rx_buffer[(i + 31)] == 49 && is_pb_done == true)
-#elif SIMCOM_MODEL == a7670sa
-        if (rx_buffer[(i + 29)] == 49 && is_pb_done == true)
 #elif SIMCOM_MODEL == a7080
         if (rx_buffer[(i + 8)] == 49 && is_pb_done == true)
 #endif
@@ -53,12 +51,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
                             GPIO_LOAD_PIN[load_port - 1], 1);
           check_mqtt_signal_after_restart = true;
         }
-#if SIMCOM_MODEL == a7672s
+#if SIMCOM_MODEL == a7672s || SIMCOM_MODEL == a7680 || SIMCOM_MODEL == a7670sa
         if (rx_buffer[(i + 29)] == 48 && is_pb_done == true)
 #elif SIMCOM_MODEL == a7670c
         if (rx_buffer[(i + 31)] == 48 && is_pb_done == true)
-#elif SIMCOM_MODEL == a7670sa
-        if (rx_buffer[(i + 29)] == 48 && is_pb_done == true)
 #elif SIMCOM_MODEL == a7080
         if (rx_buffer[(i + 8)] == 48 && is_pb_done == true)
 #endif

@@ -110,11 +110,9 @@ bool enable_mqtt_on_gsm_modem(void) {
 	HAL_Delay(400);
     sprintf(array_at_command,"AT+SMCONF=\"USERNAME\",\"%s\"\r\n", MQTT_USER);
 	send_to_simcom_a76xx(array_at_command);
-//    send_to_simcom_a76xx("AT+SMCONF=\"USERNAME\",\"mqttnode\"\r\n");
     HAL_Delay(400);
     sprintf(array_at_command,"AT+SMCONF=\"PASSWORD\",\"%s\"\r\n", MQTT_PASS);
 	send_to_simcom_a76xx(array_at_command);
-//    send_to_simcom_a76xx("AT+SMCONF=\"PASSWORD\",\"congamo\"\r\n");
     HAL_Delay(400);
     send_to_simcom_a76xx("AT+SMCONF=\"CLEANSS\",1\r\n");
     HAL_Delay(400);
@@ -463,17 +461,24 @@ bool wait_for_pb_done_event(void) {
 //	  send_to_simcom_a76xx("AT+CGDCONT?\r\n");
 	  HAL_Delay(500);
 	  return true;
-#endif
-    if (strstr((char *)rx_data_sim, "PB DONE")) {
-      return true;
-    }
-#if SIMCOM_MODEL == a7677
+#elif SIMCOM_MODEL == a7680
+	if (strstr((char *)rx_data_sim, "+SMS FULL")) {
+	  return true;
+	}
+#elif SIMCOM_MODEL == a7677
     if (strstr((char *)rx_data_sim, "EPS PDN ACT 1")) {
       is_pb_done = 1;
       led_status('B');
       HAL_Delay(8000);
       return true;
     }
+#else
+    {
+	  if (strstr((char *)rx_data_sim, "PB DONE")) {
+		return true;
+	  }
+    }
+
 #endif
   }
   if (is_connect_simcom == 0) {
