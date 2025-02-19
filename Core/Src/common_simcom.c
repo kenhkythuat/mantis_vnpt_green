@@ -39,24 +39,25 @@ int read_signal_quality(void) {
   } else {
       printf("khong the phan tich chuoi @@ !\n");
   }
-//  signal_strength = (rx_data_sim[8] - 48) * 10 + (rx_data_sim[9] - 48);
   signal_strength=signal;
   if (signal_strength >= 31) {
     rssi = -51;
   } else if (signal_strength <= 0) {
-    rssi = -113;
-  } else
+	  printf("not known or not detectable !\r\n");
+	  rssi = -113;
+  } else if (signal_strength == 99) {
+		  printf("not known or not detectable !\r\n");
+		  rssi = -113;
+	}
+  else
     rssi = (signal_strength * 2 - 113);
-
   return rssi;
 }
 
 bool check_signal_simcom(void) {
   led_status('R');
   printf("-----------------check_signal_simcom------------------\n");
-  send_to_simcom_a76xx("ATE0\r\n");
-  HAL_Delay(200);
-  send_to_simcom_a76xx("AT+CSQ\r\n");
+  read_signal_quality();
   HAL_Delay(200);
   signal_strength = (rx_data_sim[8] - 48) * 10 + (rx_data_sim[9] - 48);
   if (signal_strength >= 31) {
@@ -71,6 +72,8 @@ bool check_signal_simcom(void) {
     printf("-----------------SIM OK !------------------\n");
   } else
     return false;
+  HAL_Delay(200);
+  send_to_simcom_a76xx("AT+CGREG?\r\n");
   HAL_Delay(200);
   send_to_simcom_a76xx("AT+CREG?\r\n");
   HAL_Delay(200);
@@ -121,7 +124,7 @@ bool enable_mqtt_on_gsm_modem(void) {
     memset(rx_data_sim, '\0', 1500);
     HAL_Delay(400);
     send_to_simcom_a76xx("AT+SMCONN\r\n");
-    HAL_Delay(7000);
+    HAL_Delay(9000);
     if ((strstr((char *)rx_data_sim, "OK") != NULL)) {
       printf("----------Service have started SIMCOM 7080G successfully------------\n");
       is_connected_mqtt=1;
@@ -261,6 +264,18 @@ bool publish_mqtt_via_gsm(void) {
   led_status('W');
   create_JSON();
 #if SIMCOM_MODEL == a7080
+	send_to_simcom_a76xx("AT+SMSTATE?\r\n");
+	HAL_Delay(200);
+	if (strstr((char *)rx_data_sim, "+SMSTATE: 1") != NULL) {
+	  printf("-----------------Expression MQTT on-line state!------------------\n");
+	//		  return true;
+	}
+	else {
+		printf("-----------------Expression MQTT off-line state @@ !------------------\n");
+		return false;
+	}
+	send_to_simcom_a76xx("AT+CGREG?\r\n");
+	HAL_Delay(200);
   	sprintf(array_at_command, "AT+SMPUB=\"%s\",%d,0,0\r\n",MQTT_TOPIC_ACTUATOR_STATUS,strlen(array_json));
 	send_to_simcom_a76xx(array_at_command);
 	HAL_Delay(300);
@@ -434,19 +449,19 @@ bool wait_for_pb_done_event(void) {
 	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CICCID\r\n");
 	  HAL_Delay(200);
-	  send_to_simcom_a76xx("AT+CNMP=2\r\n");
-	  HAL_Delay(200);
-	  send_to_simcom_a76xx("AT+CNMP?\r\n");
-	  HAL_Delay(200);
-	  send_to_simcom_a76xx("AT+CMNB=2\r\n");
-	  HAL_Delay(200);
+//	  send_to_simcom_a76xx("AT+CNMP=2\r\n");
+//	  HAL_Delay(200);
+//	  send_to_simcom_a76xx("AT+CNMP?\r\n");
+//	  HAL_Delay(200);
+//	  send_to_simcom_a76xx("AT+CMNB=2\r\n");
+//	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CMNB?\r\n");
 	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+COPS=0\r\n");
 	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+COPS?\r\n");
 	  HAL_Delay(200);
-	  send_to_simcom_a76xx("AT+CSQ\r\n");
+	  read_signal_quality();
 	  HAL_Delay(200);
 	  send_to_simcom_a76xx("AT+CBANDCFG=\"NB-IOT\",1,3,4,5,8,13,18,19,20,25,26,28,66,71,85\r\n");
 	  HAL_Delay(200);
@@ -462,7 +477,10 @@ bool wait_for_pb_done_event(void) {
 	  HAL_Delay(500);
 	  return true;
 #elif SIMCOM_MODEL == a7680
-	if (strstr((char *)rx_data_sim, "+SMS FULL")) {
+	if (strstr((char *)rx_data_sim, "+SMS FULL")||strstr((char *)rx_data_sim, "+CCIOTOPTI: 1")) {
+	  HAL_Delay(7000);
+	  send_to_simcom_a76xx("ATE0\r\n");
+	  HAL_Delay(200);
 	  return true;
 	}
 #elif SIMCOM_MODEL == a7677

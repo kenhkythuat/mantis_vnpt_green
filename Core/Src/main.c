@@ -156,6 +156,14 @@ void enable_simcom(void) {
 	HAL_Delay(4000);
 	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
 	HAL_Delay(4000);
+//	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
+//	HAL_Delay(2000);
+//	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
+//	HAL_Delay(5000);
+//	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
+//	HAL_Delay(2000);
+//	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
+//	HAL_Delay(5000);
 #else
 	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
 	HAL_Delay(3300);
@@ -209,16 +217,17 @@ void check_handle_state(enum GmsModemState status) {
     if (is_checked_sim) {
       total_errors = 0;
       current_status_simcom = InternetReady;
-      printf("Current status Simcom Internet Ready\r\n");
+      printf("Simcom current status is Internet ready\r\n");
     } else {
       total_errors++;
     }
-    if (total_errors > 5) {
+    if (total_errors > 10) {
       restart_stm32();
     }
     break;
   }
   case InternetReady: {
+	    IWDG->KR = 0xAAAA;
     is_enable_mqtt = enable_mqtt_on_gsm_modem();
 #if SIMCOM_MODEL != a7080
     if (is_enable_mqtt) {
@@ -234,7 +243,7 @@ void check_handle_state(enum GmsModemState status) {
       total_errors = 0;
       led_status('G');
       current_status_simcom = MqttReady;
-      printf("Current status Simcom MQTT Ready\r\n");
+      printf("Simcom current status is MQTT ready\r\n");
     } else
       total_errors++;
     if (total_errors > 3) {
@@ -258,10 +267,10 @@ void check_handle_state(enum GmsModemState status) {
   }
   case Subscribed: {
     if (to_send_status_to_server) {
-      IWDG->KR = 0xAAAA;
       is_updated_status = send_payload_signal_to_server();
       if (is_updated_status) {
         to_send_status_to_server = 0;
+        IWDG->KR = 0xAAAA;
         total_errors = 0;
       } else {
         total_errors++;
