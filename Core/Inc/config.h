@@ -25,15 +25,15 @@
 #define a7080 4  // NB-IOT
 #define a7680 5  // 4G
 
-#define SIMCOM_MODEL a7680 // #default is a7670 if you use model other please choose enter your model
-#define SAVE_LOAD true
+#define SIMCOM_MODEL a7672s // #default is a7670 if you use model other please choose enter your model
+#define SAVE_LOAD false
 #define INTERVAL_PUPLISH_DATA 7 // the time the device sends data to the server
 #define CHECK_TIME_AFTER_MQTT_RESTART 50  //UNITS IN SECONDS
-#define NUMBER_LOADS 4
+#define NUMBER_LOADS 8
 
 // Serial number. Must be lower case.
 #ifndef SERIAL_NUMBER
-  #define SERIAL_NUMBER "sw000196"
+  #define SERIAL_NUMBER "sw000152"
 #endif
 
 //#define MQTT_USER "node" 		// User - connect to MQTT broker

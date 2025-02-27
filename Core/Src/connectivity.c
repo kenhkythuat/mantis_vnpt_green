@@ -24,15 +24,16 @@ void send_to_simcom_a76xx(char *cmd) {
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
   if (huart->Instance == USART1) {
-     printf("\r\nSIMCOM Response:");
-     printf(rx_buffer);
+    printf("\r\nSIMCOM Response:");
+    printf(rx_buffer);
     static int times;
     times = strlen(rx_buffer);
     for (int i = 0; i < times; i++) {
       rx_data_sim[i] = rx_buffer[i];
       if ((char)rx_buffer[i] == (char)SERIAL_NUMBER[5] &&
           (char)rx_buffer[i + 1] == (char)SERIAL_NUMBER[6] &&
-          (char)rx_buffer[i + 2] == (char)SERIAL_NUMBER[7]&&current_status_simcom == Subscribed) {
+          (char)rx_buffer[i + 2] == (char)SERIAL_NUMBER[7] &&
+          current_status_simcom == Subscribed) {
         load_port = (rx_buffer[i + 4] - 48);
         pin_1x = (rx_buffer[(81)] - 48);
         if (pin_1x == 0) {

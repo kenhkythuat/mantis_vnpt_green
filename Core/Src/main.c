@@ -150,33 +150,22 @@ void enable_simcom(void) {
   led_status('R');
   printf("Enable SIMCOM\n");
 #if SIMCOM_MODEL == a7080
-	send_to_simcom_a76xx("AT+CPOWD=1\r\n");
-	HAL_Delay(5000);
-	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
-	HAL_Delay(4000);
-	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
-	HAL_Delay(4000);
-//	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
-//	HAL_Delay(2000);
-//	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
-//	HAL_Delay(5000);
-//	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
-//	HAL_Delay(2000);
-//	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
-//	HAL_Delay(5000);
+  send_to_simcom_a76xx("AT+CPOWD=1\r\n");
+  HAL_Delay(5000);
+  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
+  HAL_Delay(4000);
+  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
+  HAL_Delay(4000);
 #else
-	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
-	HAL_Delay(3300);
-	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
-	HAL_Delay(3300);
-	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
-	HAL_Delay(200);
-	HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
-	HAL_Delay(1000);
+  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
+  HAL_Delay(3300);
+  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
+  HAL_Delay(3300);
+  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
+  HAL_Delay(200);
+  HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
+  HAL_Delay(1000);
 #endif
-
-
-
 }
 void led_status(char cmd) {
   if (cmd == 'R') {
@@ -227,7 +216,7 @@ void check_handle_state(enum GmsModemState status) {
     break;
   }
   case InternetReady: {
-	    IWDG->KR = 0xAAAA;
+    IWDG->KR = 0xAAAA;
     is_enable_mqtt = enable_mqtt_on_gsm_modem();
 #if SIMCOM_MODEL != a7080
     if (is_enable_mqtt) {
@@ -252,7 +241,7 @@ void check_handle_state(enum GmsModemState status) {
     break;
   }
   case MqttReady: {
-	    IWDG->KR = 0xAAAA;
+    IWDG->KR = 0xAAAA;
     is_subcribed_mqtt = subscribe_mqtt_via_gsm();
     if (is_subcribed_mqtt) {
       total_errors = 0;
