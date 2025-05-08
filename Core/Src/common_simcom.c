@@ -133,12 +133,12 @@ bool enable_mqtt_on_gsm_modem(void) {
   }
 #else
   send_to_simcom_a76xx("AT+CMQTTSTART\r\n");
-  HAL_Delay(400);
-  if ((strstr((char *)rx_data_sim, "+CMQTTSTART: 0") != NULL)) {
-    printf("----------Service have started successfully------------\n");
+  HAL_Delay(3000);
+  if ((strstr((char *)rx_data_sim, "+CMQTTSTART: 0") != NULL||strstr((char *)rx_data_sim, "OK") != NULL)) {
+    printf("----------Service have started successfully 123------------\n");
     return true;
   } else {
-    printf("----------------- Start MQTT service fail------------------\n");
+    printf("----------------- Start MQTT service fail 123------------------\n");
     return false;
   }
 #endif
@@ -221,7 +221,7 @@ bool subscribe_mqtt_via_gsm(void) {
     HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, SET);
     return true;
   } else {
-    printf("-----------------Subscribe Fail !------------------\n");
+    printf("\r\n-----------------Subscribe Fail !------------------\n");
     is_at_subcribe_mqtt = false;
     return false;
   }
@@ -317,7 +317,7 @@ bool publish_mqtt_via_gsm(void) {
     send_to_simcom_a76xx(array_json);
     HAL_Delay(400);
     if (strstr((char *)rx_data_sim, "OK") != NULL) {
-      printf("----------------- Sent input the message body of a publish "
+      printf("\r\n----------------- Sent input the message body of a publish "
              "message ! ------------------\n");
       is_at_data_puplish_mqtt = true;
     } else {

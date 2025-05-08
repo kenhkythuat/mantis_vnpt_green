@@ -26,23 +26,23 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
   if (huart->Instance == USART1) {
     printf("\r\nSIMCOM Response:");
     printf(rx_buffer);
-    static int times;
-    times = strlen(rx_buffer);
-    for (int i = 0; i < times; i++) {
+//    static int times;
+//    times = strlen(rx_buffer);
+    for (int i = 0; i < 1500; i++) {
       rx_data_sim[i] = rx_buffer[i];
       if ((char)rx_buffer[i] == (char)SERIAL_NUMBER[5] &&
           (char)rx_buffer[i + 1] == (char)SERIAL_NUMBER[6] &&
           (char)rx_buffer[i + 2] == (char)SERIAL_NUMBER[7] &&
           current_status_simcom == Subscribed) {
         load_port = (rx_buffer[i + 4] - 48);
-        pin_1x = (rx_buffer[(81)] - 48);
+        pin_1x = (rx_buffer[(i + 5)] - 48);
         if (pin_1x == 0) {
           load_port = 10;
         }
 #if SIMCOM_MODEL == a7672s || SIMCOM_MODEL == a7680 || SIMCOM_MODEL == a7670sa
-        if (rx_buffer[(i + 29)] == 49 && is_pb_done == true)
+        if ((rx_buffer[(i + 29)] == 49 && is_pb_done == true)||(load_port ==10&& rx_buffer[(i + 30)] == 49))
 #elif SIMCOM_MODEL == a7670c
-        if (rx_buffer[(i + 31)] == 49 && is_pb_done == true)
+        if ((rx_buffer[(i + 31)] == 49 && is_pb_done == true)||(load_port ==10&& rx_buffer[(i + 32)] == 49))
 #elif SIMCOM_MODEL == a7080
         if (rx_buffer[(i + 8)] == 49 && is_pb_done == true)
 #endif
@@ -53,9 +53,9 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
           check_mqtt_signal_after_restart = true;
         }
 #if SIMCOM_MODEL == a7672s || SIMCOM_MODEL == a7680 || SIMCOM_MODEL == a7670sa
-        if (rx_buffer[(i + 29)] == 48 && is_pb_done == true)
+        if ((rx_buffer[(i + 29)] == 48 && is_pb_done == true)||(load_port ==10&& rx_buffer[(i + 30)] == 48))
 #elif SIMCOM_MODEL == a7670c
-        if (rx_buffer[(i + 31)] == 48 && is_pb_done == true)
+        if ((rx_buffer[(i + 31)] == 48 && is_pb_done == true)||(load_port ==10&& rx_buffer[(i + 32)] == 48))
 #elif SIMCOM_MODEL == a7080
         if (rx_buffer[(i + 8)] == 48 && is_pb_done == true)
 #endif

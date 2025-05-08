@@ -162,7 +162,7 @@ void enable_simcom(void) {
   HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
   HAL_Delay(3300);
   HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, SET);
-  HAL_Delay(200);
+  HAL_Delay(500);
   HAL_GPIO_WritePin(A76XX_PWRKEY_GPIO_Port, A76XX_PWRKEY_Pin, RESET);
   HAL_Delay(1000);
 #endif
@@ -190,9 +190,10 @@ void check_handle_state(enum GmsModemState status) {
   switch (status) {
   case Off: {
     enable_simcom();
+    IWDG->KR = 0xAAAA;
     is_pb_done = wait_for_pb_done_event();
     if (is_pb_done) {
-      MX_IWDG_Init();
+//      MX_IWDG_Init();
       current_status_simcom = On;
       printf("Current status Simcom On \r\n");
     } else {
@@ -259,6 +260,7 @@ void check_handle_state(enum GmsModemState status) {
       is_updated_status = send_payload_signal_to_server();
       if (is_updated_status) {
         to_send_status_to_server = 0;
+        is_updated_status=0;
         IWDG->KR = 0xAAAA;
         total_errors = 0;
       } else {
@@ -309,7 +311,7 @@ int main(void) {
   MX_GPIO_Init();
   MX_TIM6_Init();
   MX_USART1_UART_Init();
-  //  MX_IWDG_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
   printf("-----Welcome to Agriconnect-----\n");
   printf("-----Hello Mantis-----\n");
