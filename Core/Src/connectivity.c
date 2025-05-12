@@ -24,8 +24,8 @@ void send_to_simcom_a76xx(char *cmd) {
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
   if (huart->Instance == USART1) {
-    printf("\r\nSIMCOM Response:");
-    printf(rx_buffer);
+//    printf("\r\nSIMCOM Response:");
+//    printf(rx_buffer);
 //    static int times;
 //    times = strlen(rx_buffer);
     for (int i = 0; i < 1500; i++) {
@@ -73,7 +73,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
       current_status_simcom = On;
     }
   }
-  memset(rx_buffer, '\0', 1500);
+  //memset(rx_buffer, '\0', 1500);
   HAL_UARTEx_ReceiveToIdle_IT(&huart1, (uint8_t *)rx_buffer, 1500);
 }
 

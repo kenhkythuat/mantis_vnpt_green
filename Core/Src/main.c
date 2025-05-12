@@ -193,7 +193,6 @@ void check_handle_state(enum GmsModemState status) {
     IWDG->KR = 0xAAAA;
     is_pb_done = wait_for_pb_done_event();
     if (is_pb_done) {
-//      MX_IWDG_Init();
       current_status_simcom = On;
       printf("Current status Simcom On \r\n");
     } else {

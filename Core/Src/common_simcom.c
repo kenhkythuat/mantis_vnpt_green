@@ -135,10 +135,10 @@ bool enable_mqtt_on_gsm_modem(void) {
   send_to_simcom_a76xx("AT+CMQTTSTART\r\n");
   HAL_Delay(3000);
   if ((strstr((char *)rx_data_sim, "+CMQTTSTART: 0") != NULL||strstr((char *)rx_data_sim, "OK") != NULL)) {
-    printf("----------Service have started successfully 123------------\n");
+    printf("----------Service have started successfully------------\n");
     return true;
   } else {
-    printf("----------------- Start MQTT service fail 123------------------\n");
+    printf("----------------- Start MQTT service fail------------------\n");
     return false;
   }
 #endif
@@ -260,6 +260,7 @@ bool subscribe_mqtt_via_gsm(void) {
 
 bool publish_mqtt_via_gsm(void) {
   //  is used to input the topic of a publish message
+	memset(rx_buffer, '\0', 1500);
   led_status('W');
   create_JSON();
 #if SIMCOM_MODEL == a7080
