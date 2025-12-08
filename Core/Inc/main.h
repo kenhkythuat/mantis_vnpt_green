@@ -31,7 +31,8 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "config.h"
+#include "stdbool.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -46,7 +47,7 @@ extern "C" {
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-#include "stdbool.h"
+
 float Level_Pin (void);
 void write_status_load();
 void reset_flash(uint32_t numberpages);
@@ -58,11 +59,6 @@ extern uint32_t value_page2;
 extern uint32_t value_page3;
 extern uint32_t value_Relay;
 
-#define a7672 1
-#define a7670 2
-#define a7677 3
-#define true 1
-#define false 0
 
 /* USER CODE END EM */
 
@@ -123,8 +119,8 @@ extern void led_status(char cmd);
 #define PAYLOAD_10_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-extern char rx_buffer[1500];
-extern char rx_data_sim[1500];
+extern char rx_buffer[RX_BUFFER_UART1];
+extern char rx_data_sim[RX_BUFFER_UART1];
 extern char array_at_command[400];
 extern int is_pb_done;
 extern int isATOK;

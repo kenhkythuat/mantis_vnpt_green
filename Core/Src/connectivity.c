@@ -5,13 +5,13 @@
  *      Author: thuanphat7
  */
 #include "cJSON.h"
-#include "config.h"
 #include "main.h"
 #include "stdbool.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
 #include <math.h>
+//#include "config.h"
 extern UART_HandleTypeDef huart1;
 char array_json[200];
 int pin_1x;
@@ -26,9 +26,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
   if (huart->Instance == USART1) {
 //    printf("\r\nSIMCOM Response:");
 //    printf(rx_buffer);
-//    static int times;
-//    times = strlen(rx_buffer);
-    for (int i = 0; i < 1500; i++) {
+    for (int i = 0; i < RX_BUFFER_UART1; i++) {
       rx_data_sim[i] = rx_buffer[i];
       if ((char)rx_buffer[i] == (char)SERIAL_NUMBER[5] &&
           (char)rx_buffer[i + 1] == (char)SERIAL_NUMBER[6] &&
@@ -73,8 +71,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
       current_status_simcom = On;
     }
   }
-  //memset(rx_buffer, '\0', 1500);
-  HAL_UARTEx_ReceiveToIdle_IT(&huart1, (uint8_t *)rx_buffer, 1500);
+  memset(rx_buffer, '\0', RX_BUFFER_UART1);
+  HAL_UARTEx_ReceiveToIdle_IT(&huart1, (uint8_t *)rx_buffer, RX_BUFFER_UART1);
 }
 
 void create_JSON(void) {

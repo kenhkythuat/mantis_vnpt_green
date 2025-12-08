@@ -5,12 +5,12 @@
  *      Author: thuanphat7
  */
 #include "cJSON.h"
-#include "config.h"
 #include "stdbool.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
 #include <main.h>
+//#include "config.h"
 #include <stdbool.h>
 
 bool is_at_connect_mqtt = false;
@@ -76,12 +76,6 @@ bool check_signal_simcom(void) {
   HAL_Delay(200);
   send_to_simcom_a76xx("AT+CREG?\r\n");
   HAL_Delay(200);
-//  if (strstr((char *)rx_data_sim, "+CREG: 0,1") ||
-//      strstr((char *)rx_data_sim, "+CREG: 0,0") ||
-//      strstr((char *)rx_data_sim, "+CREG: 0,2")) {
-//    printf("-----------------Network registration OK!------------------\n");
-//  } else
-//    return false;
   send_to_simcom_a76xx("ATI\r\n");
   HAL_Delay(200);
   send_to_simcom_a76xx("AT+CICCID\r\n");
@@ -208,7 +202,7 @@ bool connect_mqtt_server_by_gsm(void) {
 
 bool subscribe_mqtt_via_gsm(void) {
 #if SIMCOM_MODEL == a7080
-  memset(rx_data_sim, '\0', 1500);
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
   HAL_Delay(400);
   char temp_buffer[200];
   sprintf(temp_buffer, "\"%s/snac/%s/#\"", FARM, SERIAL_NUMBER);
@@ -260,7 +254,7 @@ bool subscribe_mqtt_via_gsm(void) {
 
 bool publish_mqtt_via_gsm(void) {
   //  is used to input the topic of a publish message
-	memset(rx_buffer, '\0', 1500);
+  memset(rx_buffer, '\0', RX_BUFFER_UART1);
   led_status('W');
   create_JSON();
 #if SIMCOM_MODEL == a7080
@@ -450,12 +444,6 @@ bool wait_for_pb_done_event(void) {
     HAL_Delay(200);
     send_to_simcom_a76xx("AT+CICCID\r\n");
     HAL_Delay(200);
-    //	  send_to_simcom_a76xx("AT+CNMP=2\r\n");
-    //	  HAL_Delay(200);
-    //	  send_to_simcom_a76xx("AT+CNMP?\r\n");
-    //	  HAL_Delay(200);
-    //	  send_to_simcom_a76xx("AT+CMNB=2\r\n");
-    //	  HAL_Delay(200);
     send_to_simcom_a76xx("AT+CMNB?\r\n");
     HAL_Delay(200);
     send_to_simcom_a76xx("AT+COPS=0\r\n");
