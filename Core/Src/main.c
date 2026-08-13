@@ -93,6 +93,7 @@ bool is_subcribed_mqtt = false;
 bool is_published_mqtt = false;
 bool is_acquiered_mqtt = false;
 bool is_updated_status = false;
+bool is_rpc_response_pending = false;
 uint8_t total_errors = 0;
 
 uint32_t address = 0x0801FC00;
@@ -106,6 +107,8 @@ uint8_t check_error_mqtt;
 
 bool check_mqtt_signal_after_restart = false;
 uint16_t time_after_restart;
+char rpc_response_request_id[16];
+char rpc_response_payload[200];
 
 /* USER CODE END PV */
 
@@ -269,6 +272,31 @@ void check_handle_state(enum GmsModemState status) {
           current_status_simcom = On;
         }
       }
+    }
+    break;
+  }
+  case Response: {
+    printf("STM32 response data server !\r\n");
+    if (is_rpc_response_pending) {
+      IWDG->KR = 0xAAAA;
+      if (publish_rpc_response_via_gsm()) {
+        is_rpc_response_pending = false;
+        rpc_response_request_id[0] = '\0';
+        rpc_response_payload[0] = '\0';
+        current_status_simcom = Subscribed;
+        total_errors = 0;
+      } else {
+        total_errors++;
+        if (total_errors > 3) {
+          is_rpc_response_pending = false;
+          rpc_response_request_id[0] = '\0';
+          rpc_response_payload[0] = '\0';
+          stop_mqtt_via_gsm();
+          current_status_simcom = On;
+        }
+      }
+    } else {
+      current_status_simcom = Subscribed;
     }
     break;
   }

@@ -220,12 +220,13 @@ bool subscribe_mqtt_via_gsm(void) {
     return false;
   }
 #else
-  sprintf(array_at_command, "%s/snac/%s/#", FARM, SERIAL_NUMBER);
+//  sprintf(array_at_command, "%s/snac/%s/#", FARM, SERIAL_NUMBER);
+  sprintf(array_at_command, "%s", MQTT_TOPIC_SENSOR_THINGSBOARD);
   sprintf(array_at_command, "AT+CMQTTSUBTOPIC=0,%d,1\r\n",
           (int)strlen(array_at_command));
   send_to_simcom_a76xx(array_at_command);
   HAL_Delay(500);
-  sprintf(array_at_command, "%s/snac/%s/#", FARM, SERIAL_NUMBER);
+  sprintf(array_at_command, "%s", MQTT_TOPIC_SENSOR_THINGSBOARD);
   send_to_simcom_a76xx(array_at_command);
   HAL_Delay(500);
   if (strstr((char *)rx_data_sim, "OK") != NULL) {
@@ -335,6 +336,74 @@ bool publish_mqtt_via_gsm(void) {
     }
   }
 #endif
+  return false;
+}
+
+bool publish_rpc_response_via_gsm(void) {
+  char rpc_response_topic[80];
+
+  if (rpc_response_request_id[0] == '\0' || rpc_response_payload[0] == '\0') {
+    printf("-----------------RPC response data is empty !------------------\n");
+    return false;
+  }
+
+  sprintf(rpc_response_topic, "v1/devices/me/rpc/response/%s",
+          rpc_response_request_id);
+  printf("RPC response topic: %s\r\n", rpc_response_topic);
+  printf("RPC response payload: %s\r\n", rpc_response_payload);
+
+#if SIMCOM_MODEL == a7080
+  send_to_simcom_a76xx("AT+SMSTATE?\r\n");
+  HAL_Delay(200);
+  if (strstr((char *)rx_data_sim, "+SMSTATE: 1") == NULL) {
+    printf("-----------------Expression MQTT off-line state !------------------\n");
+    return false;
+  }
+
+  sprintf(array_at_command, "AT+SMPUB=\"%s\",%d,0,0\r\n", rpc_response_topic,
+          (int)strlen(rpc_response_payload));
+  send_to_simcom_a76xx(array_at_command);
+  HAL_Delay(300);
+  sprintf(array_at_command, "%s\r\n", rpc_response_payload);
+  send_to_simcom_a76xx(array_at_command);
+  HAL_Delay(1000);
+  if (strstr((char *)rx_data_sim, "OK") != NULL) {
+    printf("-----------------RPC response publish success !------------------\n");
+    return true;
+  }
+#else
+  sprintf(array_at_command, "AT+CMQTTTOPIC=0,%d\r\n",
+          (int)strlen(rpc_response_topic));
+  send_to_simcom_a76xx(array_at_command);
+  HAL_Delay(400);
+  sprintf(array_at_command, "%s\r\n", rpc_response_topic);
+  send_to_simcom_a76xx(array_at_command);
+  HAL_Delay(400);
+  if (strstr((char *)rx_data_sim, "OK") == NULL) {
+    printf("-----------------RPC response topic fail !------------------\n");
+    return false;
+  }
+
+  sprintf(array_at_command, "AT+CMQTTPAYLOAD=0,%d\r\n",
+          (int)strlen(rpc_response_payload));
+  send_to_simcom_a76xx(array_at_command);
+  HAL_Delay(400);
+  send_to_simcom_a76xx(rpc_response_payload);
+  HAL_Delay(400);
+  if (strstr((char *)rx_data_sim, "OK") == NULL) {
+    printf("-----------------RPC response payload fail !------------------\n");
+    return false;
+  }
+
+  send_to_simcom_a76xx("AT+CMQTTPUB=0,1,60\r\n");
+  HAL_Delay(1000);
+  if (strstr((char *)rx_data_sim, "+CMQTTPUB: 0,0") != NULL) {
+    printf("-----------------RPC response publish success !------------------\n");
+    return true;
+  }
+#endif
+
+  printf("-----------------RPC response publish fail !------------------\n");
   return false;
 }
 

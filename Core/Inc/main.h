@@ -141,9 +141,13 @@ extern bool is_subcribed_mqtt;
 extern bool is_published_mqtt;
 extern bool is_acquiered_mqtt;
 extern bool is_updated_status;
+extern bool is_rpc_response_pending;
 extern GPIO_TypeDef* GPIO_LOAD_PORT[10];
 extern unsigned int GPIO_LOAD_PIN[10];
 extern bool check_mqtt_signal_after_restart;
+extern char rpc_response_request_id[16];
+extern char rpc_response_payload[200];
+extern bool publish_rpc_response_via_gsm(void);
 enum GmsModemState
 {
 	Off,
@@ -152,7 +156,8 @@ enum GmsModemState
 	MqttReady,
 	Subscribed,
 	UpdateToServer,
-	DisconnectMqtt
+	DisconnectMqtt,
+	Response
 };
 extern enum GmsModemState current_status_simcom;
 
