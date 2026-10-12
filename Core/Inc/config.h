@@ -16,8 +16,8 @@
 
 #define VERSION_MANTIS "1.0"
 
-#define FARM "gateway-agriconnect"
-//#define FARM "demox"
+//#define FARM "gateway-agriconnect"
+#define FARM "demox"
 
 #define a7672s 1  // 4G
 #define a7670c 2  // 4G
@@ -35,36 +35,37 @@
 
 // Serial number. Must be lower case.
 #ifndef SERIAL_NUMBER
-  #define SERIAL_NUMBER "sw000188"
+  #define SERIAL_NUMBER "sw000100"
 #endif
 
-//#define MQTT_USER "node" 		// User - connect to MQTT broker
-//#define MQTT_PASS "654321"		// Password - connect to MQTT broker
+#define MQTT_USER "node" 		// User - connect to MQTT broker
+#define MQTT_PASS "654321"		// Password - connect to MQTT broker
 
 //#define MQTT_USER "mqttnode"       // User - connect to MQTT broker
 //#define MQTT_PASS "congamo"		// Password - connect to MQTT broker
 
-#define MQTT_USER "e5rgec9m2ft34coffb59"       // User - connect to MQTT broker
-#define MQTT_PASS "npr67fk0vblk2n5r0y2s"		// Password - connect to MQTT broker
+//#define MQTT_USER "8fg5lusX2FccGLp9UcJh"       // User - connect to MQTT broker
+// #define MQTT_PASS "K2NhWZnH1uwTcMpzlOqe"		// Password - connect to MQTT broker
 
 //#define MQTT_TOPIC_ACTUATOR_STATUS FARM "/sn/" SERIAL_NUMBER "/as/"
 //// MQTT topic to subscribe and get command to switch on/off actuator
 //#define MQTT_TOPIC_ACTUATOR_CONTROL FARM "/snac/" SERIAL_NUMBER "/"
 
-#define MQTT_TOPIC_SENSOR_THINGSBOARD "v1/devices/me/rpc/request/+"
-
+// #define MQTT_TOPIC_SENSOR_THINGSBOARD "v1/devices/me/rpc/request/+"
+#define MQTT_TOPIC_SENSOR_THINGSBOARD "v1/devices/me/attributes"
 #define MQTT_TOPIC_ACTUATOR_STATUS "v1/devices/me/telemetry"
 // MQTT topic to subscribe and get command to switch on/off actuator
 #define MQTT_TOPIC_ACTUATOR_CONTROL "v1/devices/me/telemetry"
 /** MQTT
  * Global broker: mqtt.agriconnect.vn
  */
-//#define MQTT_HOST "tcp://mqtt.agriconnect.vn"
-#define MQTT_HOST "tcp://iot.vnptgreen.vn"      // MQTT broker
-
-//#define MQTT_CLIENT_ID  SERIAL_NUMBER
-#define MQTT_CLIENT_ID  "97wg40myaxy2mrwt3smj"
+#define MQTT_HOST "tcp://mqtt.agriconnect.vn"
+#define MQTT_CLIENT_ID SERIAL_NUMBER
 #define MQTT_PORT 1883
+
+//#define MQTT_HOST "tcp://iot-demo.vnptgreen.vn"      // MQTT broker
+//#define MQTT_CLIENT_ID  "2B3n1PflCdfG43zzxlGF"
+//#define MQTT_PORT 30170
 
 
 #endif /* INC_CONFIG_H_ */
