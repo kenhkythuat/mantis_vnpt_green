@@ -14,7 +14,7 @@
 
 // Codename of the farm, where we deploy this node to.
 
-#define VERSION_MANTIS "1.2"
+#define VERSION_MANTIS "1.3"
 
 /* OTA release settings. Replace the URL with the deployed HTTPS manifest. */
 #define OTA_ENABLE 1

@@ -384,11 +384,13 @@ int main(void)
     }
     if (ota_take_request()) {
       ota_request_pending = true;
+      to_send_status_to_server = 0;
     }
-    if (ota_request_pending && current_status_simcom == Subscribed) {
+    if (ota_request_pending) {
       ota_result_t ota_result;
       ota_request_pending = false;
-      printf("[OTA] starting update check\r\n");
+      printf("[OTA] starting update check (modem_state=%d)\r\n",
+             (int)current_status_simcom);
       pause_non_ota_io();
       ota_result = ota_check_and_download();
       if (ota_result == OTA_RESULT_OK) {
@@ -408,8 +410,10 @@ int main(void)
         resume_non_ota_io();
         printf("[OTA] update failed\r\n");
       }
-    } else {
+    } else if (!simcom_mqtt_rx_pending()) {
       check_handle_state(current_status_simcom);
+    } else {
+      IWDG->KR = 0xAAAAU;
     }
   }
   /* USER CODE END 3 */

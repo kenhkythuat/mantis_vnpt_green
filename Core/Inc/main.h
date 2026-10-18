@@ -70,6 +70,7 @@ extern void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 extern void send_to_simcom_a76xx(char *cmd);
 extern void create_JSON(void);
 extern void process_simcom_rx(void);
+extern bool simcom_mqtt_rx_pending(void);
 extern bool check_signal_simcom(void);
 extern bool acquire_gsm_mqtt_client(void);
 extern bool enable_mqtt_on_gsm_modem(void);

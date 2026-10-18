@@ -18,12 +18,17 @@ char array_json[200];
 // float Percentage_battery;
 
 #define MODEM_EVENT_BUFFER_SIZE 1536U
+#define MQTT_RX_FRAME_TIMEOUT_MS 2000U
+
+static const char mqtt_rx_start_marker[] = "+CMQTTRXSTART:";
 
 static uint8_t modem_event_buffer[MODEM_EVENT_BUFFER_SIZE];
 static uint8_t modem_process_buffer[MODEM_EVENT_BUFFER_SIZE];
 static volatile uint16_t modem_event_length;
 static char mqtt_rx_window[MODEM_EVENT_BUFFER_SIZE];
 static uint16_t mqtt_rx_window_length;
+static bool mqtt_rx_frame_in_progress;
+static uint32_t mqtt_rx_frame_started_at;
 
 static bool get_rpc_request_id(const char *message, char *request_id,
                                uint16_t request_id_size) {
@@ -97,6 +102,7 @@ static void handle_mqtt_payload(const char *topic, uint16_t topic_length,
   }
 
   if (strstr(topic_text, "v1/devices/me/rpc/request/") == NULL) {
+    printf("[MQTT] ignored topic: %s\r\n", topic_text);
     cJSON_Delete(json);
     return;
   }
@@ -252,6 +258,51 @@ static void append_mqtt_window(const uint8_t *data, uint16_t length) {
   mqtt_rx_window[mqtt_rx_window_length] = '\0';
 }
 
+static void mqtt_frame_mark_pending(void) {
+  if (!mqtt_rx_frame_in_progress) {
+    mqtt_rx_frame_in_progress = true;
+    mqtt_rx_frame_started_at = HAL_GetTick();
+  }
+}
+
+static void mqtt_frame_clear(void) {
+  mqtt_rx_frame_in_progress = false;
+  mqtt_rx_frame_started_at = 0U;
+}
+
+static uint16_t mqtt_start_marker_suffix_length(void) {
+  uint16_t marker_length = (uint16_t)(sizeof(mqtt_rx_start_marker) - 1U);
+  uint16_t candidate = mqtt_rx_window_length;
+
+  if (candidate >= marker_length) {
+    candidate = (uint16_t)(marker_length - 1U);
+  }
+  while (candidate > 0U) {
+    if (memcmp(&mqtt_rx_window[mqtt_rx_window_length - candidate],
+               mqtt_rx_start_marker, candidate) == 0) {
+      return candidate;
+    }
+    candidate--;
+  }
+  return 0U;
+}
+
+bool simcom_mqtt_rx_pending(void) {
+  if (!mqtt_rx_frame_in_progress) {
+    return false;
+  }
+  if ((HAL_GetTick() - mqtt_rx_frame_started_at) < MQTT_RX_FRAME_TIMEOUT_MS) {
+    return true;
+  }
+
+  printf("[MQTT] receive frame timeout; dropping %u buffered bytes\r\n",
+         (unsigned int)mqtt_rx_window_length);
+  mqtt_rx_window_length = 0U;
+  mqtt_rx_window[0] = '\0';
+  mqtt_frame_clear();
+  return false;
+}
+
 static char *mqtt_data_after_header(char *header) {
   char *line_end = strstr(header, "\r\n");
   if (line_end != NULL) {
@@ -263,7 +314,7 @@ static char *mqtt_data_after_header(char *header) {
 
 static void process_mqtt_window(void) {
   while (mqtt_rx_window_length > 0U) {
-    char *start = strstr(mqtt_rx_window, "+CMQTTRXSTART:");
+    char *start = strstr(mqtt_rx_window, mqtt_rx_start_marker);
     char *end;
     char *line_end;
     char *topic_header;
@@ -275,6 +326,19 @@ static void process_mqtt_window(void) {
     uint16_t consumed;
 
     if (start == NULL) {
+      uint16_t suffix_length = mqtt_start_marker_suffix_length();
+      if (suffix_length > 0U) {
+        memmove(mqtt_rx_window,
+                &mqtt_rx_window[mqtt_rx_window_length - suffix_length],
+                suffix_length);
+        mqtt_rx_window_length = suffix_length;
+        mqtt_rx_window[suffix_length] = '\0';
+        mqtt_frame_mark_pending();
+      } else {
+        mqtt_rx_window_length = 0U;
+        mqtt_rx_window[0] = '\0';
+        mqtt_frame_clear();
+      }
       return;
     }
     if (start != mqtt_rx_window) {
@@ -284,6 +348,7 @@ static void process_mqtt_window(void) {
       mqtt_rx_window_length = keep;
       mqtt_rx_window[keep] = '\0';
     }
+    mqtt_frame_mark_pending();
     end = strstr(mqtt_rx_window, "+CMQTTRXEND:");
     if (end == NULL) {
       return;
@@ -307,6 +372,10 @@ static void process_mqtt_window(void) {
         while (*end_value >= '0' && *end_value <= '9') {
           end_value++;
         }
+        if (*end_value == '\r' &&
+            end_value + 1 == mqtt_rx_window + mqtt_rx_window_length) {
+          end_value++;
+        }
         if (end_value != mqtt_rx_window + mqtt_rx_window_length) {
           return;
         }
@@ -319,6 +388,7 @@ static void process_mqtt_window(void) {
     topic_header = strstr(mqtt_rx_window, "+CMQTTRXTOPIC:");
     payload_header = strstr(mqtt_rx_window, "+CMQTTRXPAYLOAD:");
     if (topic_header == NULL || payload_header == NULL ||
+        topic_header >= payload_header || payload_header >= end ||
         sscanf(topic_header, "+CMQTTRXTOPIC: %*u,%u", &topic_length) != 1 ||
         sscanf(payload_header, "+CMQTTRXPAYLOAD: %*u,%u", &payload_length) !=
             1) {
@@ -343,6 +413,7 @@ static void process_mqtt_window(void) {
             mqtt_rx_window_length - consumed);
     mqtt_rx_window_length = (uint16_t)(mqtt_rx_window_length - consumed);
     mqtt_rx_window[mqtt_rx_window_length] = '\0';
+    mqtt_frame_clear();
   }
 }
 
