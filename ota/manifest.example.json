@@ -4,5 +4,5 @@
   "app_addr": "0x08008000",
   "size": 0,
   "crc32": "0x00000000",
-  "bin_url": "https://YOUR_OTA_HOST/mantis_v1.1.0.bin"
+  "bin_url": "https://raw.githubusercontent.com/kenhkythuat/mantis_vnpt_green/refs/heads/feature/connect_server_VNPT/ota/mantis_v1.1.0.bin"
 }

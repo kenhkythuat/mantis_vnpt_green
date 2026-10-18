@@ -14,13 +14,12 @@
 
 // Codename of the farm, where we deploy this node to.
 
-#define VERSION_MANTIS "1.0"
+#define VERSION_MANTIS "1.1"
 
 /* OTA release settings. Replace the URL with the deployed HTTPS manifest. */
 #define OTA_ENABLE 1
 #define OTA_DEVICE_ID "mantis-stm32f103ret6"
-#define OTA_MANIFEST_URL \
-  "https://REPLACE_WITH_OTA_HOST/mantis/manifest.json"
+#define OTA_MANIFEST_URL "https://raw.githubusercontent.com/kenhkythuat/mantis_vnpt_green/refs/heads/feature/connect_server_VNPT/ota/manifest.json"
 
 //#define FARM "gateway-agriconnect"
 #define FARM "demox"

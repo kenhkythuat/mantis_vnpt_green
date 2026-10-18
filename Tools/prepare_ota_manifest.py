@@ -8,6 +8,10 @@ from pathlib import Path
 DEFAULT_DEVICE = "mantis-stm32f103ret6"
 DEFAULT_APP_ADDR = 0x08008000
 DEFAULT_MAX_SIZE = 238 * 1024
+DEFAULT_BASE_URL = (
+    "https://raw.githubusercontent.com/kenhkythuat/"
+    "mantis_vnpt_green/refs/heads/feature/connect_server_VNPT/ota"
+)
 
 
 def parse_int(value):
@@ -95,7 +99,7 @@ def main():
     )
     parser.add_argument("--firmware", required=True, type=Path)
     parser.add_argument("--version", required=True)
-    parser.add_argument("--base-url", required=True,
+    parser.add_argument("--base-url", default=DEFAULT_BASE_URL,
                         help="Public HTTPS directory containing the binary")
     parser.add_argument("--device", default=DEFAULT_DEVICE)
     parser.add_argument("--app-addr", default=DEFAULT_APP_ADDR, type=parse_int)

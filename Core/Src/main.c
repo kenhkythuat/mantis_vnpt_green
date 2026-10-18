@@ -350,6 +350,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
+  HAL_Delay(500U);
   printf("-----Welcome to Agriconnect-----\n");
   printf("-----Hello Mantis-----\n");
 #if SAVE_LOAD

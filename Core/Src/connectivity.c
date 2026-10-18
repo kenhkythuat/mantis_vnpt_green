@@ -59,44 +59,44 @@ static void queue_rpc_response(const char *request_id, cJSON *response) {
   }
 }
 
-static void handle_mqtt_payload(char *message) {
-  char *json_start = strchr(message, '{');
-  char *json_end = strrchr(message, '}');
-
-  if (json_start == NULL || json_end == NULL || json_end < json_start ||
-      current_status_simcom != Subscribed || is_pb_done != true) {
-    return;
-  }
-
+static void handle_mqtt_payload(const char *topic, uint16_t topic_length,
+                                const char *payload, uint16_t payload_length) {
+  char topic_text[128];
   char json_payload[200];
-  uint16_t json_length = (uint16_t)(json_end - json_start + 1);
 
-  if (json_length >= sizeof(json_payload)) {
-    printf("MQTT JSON payload is too long\r\n");
+  if (topic_length == 0U || topic_length >= sizeof(topic_text) ||
+      payload_length == 0U || payload_length >= sizeof(json_payload)) {
+    printf("[MQTT] rejected frame topic_len=%u payload_len=%u\r\n",
+           (unsigned int)topic_length, (unsigned int)payload_length);
     return;
   }
 
-  memcpy(json_payload, json_start, json_length);
-  json_payload[json_length] = '\0';
+  memcpy(topic_text, topic, topic_length);
+  topic_text[topic_length] = '\0';
+  memcpy(json_payload, payload, payload_length);
+  json_payload[payload_length] = '\0';
 
   cJSON *json = cJSON_Parse(json_payload);
   if (json == NULL) {
-    printf("Cannot parse MQTT JSON payload\r\n");
+    printf("[MQTT] cannot parse JSON on topic %s\r\n", topic_text);
     return;
   }
 
-  if (strstr(message, MQTT_TOPIC_OTA_ATTRIBUTES) != NULL) {
+  if (strcmp(topic_text, MQTT_TOPIC_OTA_ATTRIBUTES) == 0) {
     cJSON *ota = cJSON_GetObjectItemCaseSensitive(json, "OTA");
     if (cJSON_IsString(ota) && ota->valuestring != NULL &&
         strcmp(ota->valuestring, "ota_check") == 0) {
       ota_request_start();
-      printf("[OTA] attributes request accepted\r\n");
+      printf("[OTA] MQTT request accepted and queued (modem_state=%d)\r\n",
+             (int)current_status_simcom);
+    } else {
+      printf("[OTA] attributes payload ignored: %s\r\n", json_payload);
     }
     cJSON_Delete(json);
     return;
   }
 
-  if (strstr(message, "v1/devices/me/rpc/request/") == NULL) {
+  if (strstr(topic_text, "v1/devices/me/rpc/request/") == NULL) {
     cJSON_Delete(json);
     return;
   }
@@ -163,7 +163,7 @@ static void handle_mqtt_payload(char *message) {
     }
 
     if (applied_count > 0 &&
-        get_rpc_request_id(message, request_id, sizeof(request_id)) == true) {
+        get_rpc_request_id(topic_text, request_id, sizeof(request_id)) == true) {
       cJSON_AddBoolToObject(response, "success", true);
       cJSON_AddItemToObject(response, "applied", applied);
       applied = NULL;
@@ -252,11 +252,26 @@ static void append_mqtt_window(const uint8_t *data, uint16_t length) {
   mqtt_rx_window[mqtt_rx_window_length] = '\0';
 }
 
+static char *mqtt_data_after_header(char *header) {
+  char *line_end = strstr(header, "\r\n");
+  if (line_end != NULL) {
+    return line_end + 2;
+  }
+  line_end = strchr(header, '\n');
+  return line_end != NULL ? line_end + 1 : NULL;
+}
+
 static void process_mqtt_window(void) {
   while (mqtt_rx_window_length > 0U) {
     char *start = strstr(mqtt_rx_window, "+CMQTTRXSTART:");
     char *end;
     char *line_end;
+    char *topic_header;
+    char *topic_data;
+    char *payload_header;
+    char *payload_data;
+    unsigned int topic_length;
+    unsigned int payload_length;
     uint16_t consumed;
 
     if (start == NULL) {
@@ -270,12 +285,60 @@ static void process_mqtt_window(void) {
       mqtt_rx_window[keep] = '\0';
     }
     end = strstr(mqtt_rx_window, "+CMQTTRXEND:");
-    if (end == NULL || (line_end = strstr(end, "\r\n")) == NULL) {
+    if (end == NULL) {
       return;
     }
-    consumed = (uint16_t)((line_end + 2) - mqtt_rx_window);
+
+    line_end = strstr(end, "\r\n");
+    if (line_end != NULL) {
+      consumed = (uint16_t)((line_end + 2) - mqtt_rx_window);
+    } else {
+      line_end = strchr(end, '\n');
+      if (line_end != NULL) {
+        consumed = (uint16_t)((line_end + 1) - mqtt_rx_window);
+      } else {
+        char *end_value = end + strlen("+CMQTTRXEND:");
+        while (*end_value == ' ') {
+          end_value++;
+        }
+        if (*end_value < '0' || *end_value > '9') {
+          return;
+        }
+        while (*end_value >= '0' && *end_value <= '9') {
+          end_value++;
+        }
+        if (end_value != mqtt_rx_window + mqtt_rx_window_length) {
+          return;
+        }
+        consumed = mqtt_rx_window_length;
+      }
+    }
+
     mqtt_rx_window[consumed] = '\0';
-    handle_mqtt_payload(mqtt_rx_window);
+
+    topic_header = strstr(mqtt_rx_window, "+CMQTTRXTOPIC:");
+    payload_header = strstr(mqtt_rx_window, "+CMQTTRXPAYLOAD:");
+    if (topic_header == NULL || payload_header == NULL ||
+        sscanf(topic_header, "+CMQTTRXTOPIC: %*u,%u", &topic_length) != 1 ||
+        sscanf(payload_header, "+CMQTTRXPAYLOAD: %*u,%u", &payload_length) !=
+            1) {
+      printf("[MQTT] malformed SIMCom receive frame\r\n");
+    } else {
+      topic_data = mqtt_data_after_header(topic_header);
+      payload_data = mqtt_data_after_header(payload_header);
+
+      if (topic_data == NULL || payload_data == NULL ||
+          topic_data > payload_header || payload_data > end ||
+          topic_length > UINT16_MAX || payload_length > UINT16_MAX ||
+          topic_length > (unsigned int)(payload_header - topic_data) ||
+          payload_length > (unsigned int)(end - payload_data)) {
+        printf("[MQTT] incomplete SIMCom receive frame\r\n");
+      } else {
+        handle_mqtt_payload(topic_data, (uint16_t)topic_length, payload_data,
+                            (uint16_t)payload_length);
+      }
+    }
+
     memmove(mqtt_rx_window, mqtt_rx_window + consumed,
             mqtt_rx_window_length - consumed);
     mqtt_rx_window_length = (uint16_t)(mqtt_rx_window_length - consumed);
