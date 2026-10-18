@@ -388,7 +388,19 @@ int main(void)
     }
     if (ota_request_pending) {
       ota_result_t ota_result;
+      bool ota_ack_sent = false;
       ota_request_pending = false;
+      for (uint8_t attempt = 1U; attempt <= 3U; attempt++) {
+        printf("[OTA] ACK attempt %u/3\r\n", attempt);
+        if (publish_ota_ack_via_gsm()) {
+          ota_ack_sent = true;
+          break;
+        }
+        HAL_Delay(250U);
+      }
+      if (!ota_ack_sent) {
+        printf("[OTA] ACK unavailable; continuing update check\r\n");
+      }
       printf("[OTA] starting update check (modem_state=%d)\r\n",
              (int)current_status_simcom);
       pause_non_ota_io();

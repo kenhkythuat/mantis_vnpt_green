@@ -77,6 +77,7 @@ extern bool enable_mqtt_on_gsm_modem(void);
 extern bool connect_mqtt_server_by_gsm(void);
 extern bool subscribe_mqtt_via_gsm(void);
 extern bool publish_mqtt_via_gsm(void);
+extern bool publish_ota_ack_via_gsm(void);
 extern int read_signal_quality(void);
 extern bool stop_mqtt_via_gsm(void);
 extern bool check_error_mqtt_via_gsm(void);

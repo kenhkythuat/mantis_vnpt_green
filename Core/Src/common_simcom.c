@@ -409,6 +409,80 @@ bool publish_rpc_response_via_gsm(void) {
   return false;
 }
 
+bool publish_ota_ack_via_gsm(void) {
+  static const char ota_ack_payload[] = "{\"OTA\":\"check_ok\"}";
+
+  printf("[OTA] publishing ACK topic=%s payload=%s\r\n",
+         MQTT_TOPIC_OTA_ATTRIBUTES, ota_ack_payload);
+
+#if SIMCOM_MODEL == a7080
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
+  send_to_simcom_a76xx("AT+SMSTATE?\r\n");
+  HAL_Delay(200U);
+  if (strstr((char *)rx_data_sim, "+SMSTATE: 1") == NULL) {
+    printf("[OTA] ACK failed: MQTT is offline\r\n");
+    return false;
+  }
+
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
+  snprintf(array_at_command, sizeof(array_at_command),
+           "AT+SMPUB=\"%s\",%u,0,0\r\n", MQTT_TOPIC_OTA_ATTRIBUTES,
+           (unsigned int)strlen(ota_ack_payload));
+  send_to_simcom_a76xx(array_at_command);
+  HAL_Delay(300U);
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
+  snprintf(array_at_command, sizeof(array_at_command), "%s\r\n",
+           ota_ack_payload);
+  send_to_simcom_a76xx(array_at_command);
+  HAL_Delay(1000U);
+  if (strstr((char *)rx_data_sim, "OK") != NULL) {
+    printf("[OTA] ACK publish success\r\n");
+    return true;
+  }
+#else
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
+  snprintf(array_at_command, sizeof(array_at_command),
+           "AT+CMQTTTOPIC=0,%u\r\n",
+           (unsigned int)strlen(MQTT_TOPIC_OTA_ATTRIBUTES));
+  send_to_simcom_a76xx(array_at_command);
+  HAL_Delay(400U);
+
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
+  send_to_simcom_a76xx(MQTT_TOPIC_OTA_ATTRIBUTES);
+  HAL_Delay(400U);
+  if (strstr((char *)rx_data_sim, "OK") == NULL) {
+    printf("[OTA] ACK topic rejected\r\n");
+    return false;
+  }
+
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
+  snprintf(array_at_command, sizeof(array_at_command),
+           "AT+CMQTTPAYLOAD=0,%u\r\n",
+           (unsigned int)strlen(ota_ack_payload));
+  send_to_simcom_a76xx(array_at_command);
+  HAL_Delay(400U);
+
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
+  send_to_simcom_a76xx((char *)ota_ack_payload);
+  HAL_Delay(400U);
+  if (strstr((char *)rx_data_sim, "OK") == NULL) {
+    printf("[OTA] ACK payload rejected\r\n");
+    return false;
+  }
+
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
+  send_to_simcom_a76xx("AT+CMQTTPUB=0,1,60\r\n");
+  HAL_Delay(1000U);
+  if (strstr((char *)rx_data_sim, "+CMQTTPUB: 0,0") != NULL) {
+    printf("[OTA] ACK publish success\r\n");
+    return true;
+  }
+#endif
+
+  printf("[OTA] ACK publish failed\r\n");
+  return false;
+}
+
 bool stop_mqtt_via_gsm(void) {
 #if SIMCOM_MODEL == a7080
   send_to_simcom_a76xx("AT+SMDISC\r\n");
