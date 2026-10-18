@@ -28,6 +28,7 @@
 #include "string.h"
 #include <math.h>
 #include "config.h"
+#include "ota_update.h"
 
 /* USER CODE END Includes */
 
@@ -96,11 +97,6 @@ bool is_updated_status = false;
 bool is_rpc_response_pending = false;
 uint8_t total_errors = 0;
 
-uint32_t address = 0x0801FC00;
-uint32_t data = 0x01;
-uint32_t read_data = 3;
-uint32_t value_page[4];
-
 enum GmsModemState current_status_simcom = Off;
 uint8_t check_error_internet;
 uint8_t check_error_mqtt;
@@ -109,6 +105,9 @@ bool check_mqtt_signal_after_restart = false;
 uint16_t time_after_restart;
 char rpc_response_request_id[16];
 char rpc_response_payload[200];
+static bool ota_request_pending;
+static bool ota_tim6_was_running;
+static volatile bool relay_shutdown_pending;
 
 /* USER CODE END PV */
 
@@ -122,6 +121,8 @@ static void MX_IWDG_Init(void);
 void enable_simcom(void); // reset module simcom A76XX
 void send_to_simcom_a76xx(char *cmd);
 void led_status(char cmd);
+static void pause_non_ota_io(void);
+static void resume_non_ota_io(void);
 
 /* USER CODE END PFP */
 
@@ -139,15 +140,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (!check_mqtt_signal_after_restart) {
       time_after_restart++;
       if (time_after_restart > CHECK_TIME_AFTER_MQTT_RESTART) {
-        for (int i = 0; i <= 8; i++) {
-          HAL_GPIO_WritePin(GPIO_LOAD_PORT[i], GPIO_LOAD_PIN[i], 0);
-        }
-        write_status_load();
+        relay_shutdown_pending = true;
         check_mqtt_signal_after_restart = true;
       }
     }
   }
-  HAL_TIM_Base_Start_IT(&htim6);
 }
 void enable_simcom(void) {
   led_status('R');
@@ -187,6 +184,19 @@ void led_status(char cmd) {
     HAL_GPIO_WritePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin, RESET);
     HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, RESET);
     HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, RESET);
+  }
+}
+
+static void pause_non_ota_io(void) {
+  ota_tim6_was_running = (htim6.Instance->CR1 & TIM_CR1_CEN) != 0U;
+  to_send_status_to_server = 0;
+  HAL_TIM_Base_Stop_IT(&htim6);
+}
+
+static void resume_non_ota_io(void) {
+  __HAL_TIM_CLEAR_FLAG(&htim6, TIM_FLAG_UPDATE);
+  if (ota_tim6_was_running) {
+    HAL_TIM_Base_Start_IT(&htim6);
   }
 }
 void check_handle_state(enum GmsModemState status) {
@@ -346,6 +356,7 @@ int main(void)
   control_vavle_form_flash();
 #endif
   HAL_UARTEx_ReceiveToIdle_IT(&huart1, (uint8_t *)rx_buffer, RX_BUFFER_UART1);
+  ota_init();
   HAL_TIM_Base_Start_IT(&htim6);
 
   /* USER CODE END 2 */
@@ -356,7 +367,43 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    check_handle_state(current_status_simcom);
+    process_simcom_rx();
+    if (relay_shutdown_pending) {
+      relay_shutdown_pending = false;
+      for (int i = 0; i < NUMBER_LOADS; i++) {
+        HAL_GPIO_WritePin(GPIO_LOAD_PORT[i], GPIO_LOAD_PIN[i], GPIO_PIN_RESET);
+      }
+      write_status_load();
+    }
+    if (ota_take_request()) {
+      ota_request_pending = true;
+    }
+    if (ota_request_pending && current_status_simcom == Subscribed) {
+      ota_result_t ota_result;
+      ota_request_pending = false;
+      printf("[OTA] starting update check\r\n");
+      pause_non_ota_io();
+      ota_result = ota_check_and_download();
+      if (ota_result == OTA_RESULT_OK) {
+        printf("[OTA] image verified; resetting to bootloader\r\n");
+        HAL_Delay(500U);
+        NVIC_SystemReset();
+        while (1) {
+          IWDG->KR = 0xAAAAU;
+        }
+      } else if (ota_result == OTA_RESULT_NO_UPDATE) {
+        resume_non_ota_io();
+        printf("[OTA] firmware is already current\r\n");
+      } else if (ota_result == OTA_RESULT_BUSY) {
+        resume_non_ota_io();
+        printf("[OTA] update is already running\r\n");
+      } else {
+        resume_non_ota_io();
+        printf("[OTA] update failed\r\n");
+      }
+    } else {
+      check_handle_state(current_status_simcom);
+    }
   }
   /* USER CODE END 3 */
 }

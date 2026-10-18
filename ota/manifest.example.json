@@ -1,0 +1,8 @@
+{
+  "version": "1.1.0",
+  "device": "mantis-stm32f103ret6",
+  "app_addr": "0x08008000",
+  "size": 0,
+  "crc32": "0x00000000",
+  "bin_url": "https://YOUR_OTA_HOST/mantis_v1.1.0.bin"
+}

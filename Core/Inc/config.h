@@ -16,6 +16,12 @@
 
 #define VERSION_MANTIS "1.0"
 
+/* OTA release settings. Replace the URL with the deployed HTTPS manifest. */
+#define OTA_ENABLE 1
+#define OTA_DEVICE_ID "mantis-stm32f103ret6"
+#define OTA_MANIFEST_URL \
+  "https://REPLACE_WITH_OTA_HOST/mantis/manifest.json"
+
 //#define FARM "gateway-agriconnect"
 #define FARM "demox"
 
@@ -35,37 +41,38 @@
 
 // Serial number. Must be lower case.
 #ifndef SERIAL_NUMBER
-  #define SERIAL_NUMBER "sw000100"
+  #define SERIAL_NUMBER "sw_000007"
 #endif
 
-#define MQTT_USER "node" 		// User - connect to MQTT broker
-#define MQTT_PASS "654321"		// Password - connect to MQTT broker
+// #define MQTT_USER "node" 		// User - connect to MQTT broker
+// #define MQTT_PASS "654321"		// Password - connect to MQTT broker
 
 //#define MQTT_USER "mqttnode"       // User - connect to MQTT broker
 //#define MQTT_PASS "congamo"		// Password - connect to MQTT broker
 
-//#define MQTT_USER "8fg5lusX2FccGLp9UcJh"       // User - connect to MQTT broker
-// #define MQTT_PASS "K2NhWZnH1uwTcMpzlOqe"		// Password - connect to MQTT broker
+#define MQTT_USER "XR8L5hdbGRjbOW9NxtSo"       // User - connect to MQTT broker
+#define MQTT_PASS "65HRrDuBHAHaBJLaFYNv"		// Password - connect to MQTT broker
 
 //#define MQTT_TOPIC_ACTUATOR_STATUS FARM "/sn/" SERIAL_NUMBER "/as/"
 //// MQTT topic to subscribe and get command to switch on/off actuator
 //#define MQTT_TOPIC_ACTUATOR_CONTROL FARM "/snac/" SERIAL_NUMBER "/"
 
-// #define MQTT_TOPIC_SENSOR_THINGSBOARD "v1/devices/me/rpc/request/+"
-#define MQTT_TOPIC_SENSOR_THINGSBOARD "v1/devices/me/attributes"
+#define MQTT_TOPIC_RPC_REQUEST "v1/devices/me/rpc/request/+"
+#define MQTT_TOPIC_OTA_ATTRIBUTES "v1/devices/me/attributes"
+#define MQTT_TOPIC_SENSOR_THINGSBOARD MQTT_TOPIC_RPC_REQUEST
 #define MQTT_TOPIC_ACTUATOR_STATUS "v1/devices/me/telemetry"
 // MQTT topic to subscribe and get command to switch on/off actuator
 #define MQTT_TOPIC_ACTUATOR_CONTROL "v1/devices/me/telemetry"
 /** MQTT
  * Global broker: mqtt.agriconnect.vn
  */
-#define MQTT_HOST "tcp://mqtt.agriconnect.vn"
-#define MQTT_CLIENT_ID SERIAL_NUMBER
-#define MQTT_PORT 1883
+// #define MQTT_HOST "tcp://mqtt.agriconnect.vn"
+// #define MQTT_CLIENT_ID SERIAL_NUMBER
+// #define MQTT_PORT 1883
 
-//#define MQTT_HOST "tcp://iot-demo.vnptgreen.vn"      // MQTT broker
-//#define MQTT_CLIENT_ID  "2B3n1PflCdfG43zzxlGF"
-//#define MQTT_PORT 30170
+#define MQTT_HOST "tcp://iot-hub.vnptgreen.vn"      // MQTT broker
+#define MQTT_CLIENT_ID  "ORxB1GlAS7a100JhRw2F"
+#define MQTT_PORT 30188
 
 
 #endif /* INC_CONFIG_H_ */

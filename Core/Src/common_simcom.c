@@ -200,57 +200,59 @@ bool connect_mqtt_server_by_gsm(void) {
   return false;
 }
 
-bool subscribe_mqtt_via_gsm(void) {
-#if SIMCOM_MODEL == a7080
+static bool subscribe_a76xx_topic(const char *topic) {
   memset(rx_data_sim, '\0', RX_BUFFER_UART1);
-  HAL_Delay(400);
-  char temp_buffer[200];
-  sprintf(temp_buffer, "\"%s/snac/%s/#\"", FARM, SERIAL_NUMBER);
-  sprintf(array_at_command, "AT+SMSUB=%s,0\r\n", temp_buffer);
+  snprintf(array_at_command, sizeof(array_at_command),
+           "AT+CMQTTSUBTOPIC=0,%u,1\r\n", (unsigned int)strlen(topic));
   send_to_simcom_a76xx(array_at_command);
-  HAL_Delay(3000);
-  if (strstr((char *)rx_data_sim, "OK") != NULL) {
-    printf("\n-----------------Subscribe Topic Success------------------\n");
-    is_at_subcribe_topic_mqtt = true;
-    HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, SET);
-    return true;
-  } else {
-    printf("\r\n-----------------Subscribe Fail !------------------\n");
-    is_at_subcribe_mqtt = false;
+  HAL_Delay(500);
+
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
+  send_to_simcom_a76xx((char *)topic);
+  HAL_Delay(1000);
+  if (strstr((char *)rx_data_sim, "OK") == NULL) {
+    printf("\n-----------------CMQTTSUBTOPIC %s Fail------------------\n",
+           topic);
     return false;
   }
-#else
-//  sprintf(array_at_command, "%s/snac/%s/#", FARM, SERIAL_NUMBER);
-  sprintf(array_at_command, "%s", MQTT_TOPIC_SENSOR_THINGSBOARD);
-  sprintf(array_at_command, "AT+CMQTTSUBTOPIC=0,%d,1\r\n",
-          (int)strlen(array_at_command));
-  send_to_simcom_a76xx(array_at_command);
-  HAL_Delay(500);
-  sprintf(array_at_command, "%s", MQTT_TOPIC_SENSOR_THINGSBOARD);
-  send_to_simcom_a76xx(array_at_command);
-  HAL_Delay(500);
-  if (strstr((char *)rx_data_sim, "OK") != NULL) {
-    printf("-----------------Subscribe Topic Success------------------\n");
-    is_at_subcribe_topic_mqtt = true;
-  } else {
-    printf("-----------------Subscribe Topic Fail------------------\n");
-    is_at_subcribe_topic_mqtt = false;
+
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
+  send_to_simcom_a76xx("AT+CMQTTSUB=0\r\n");
+  HAL_Delay(1000);
+  if (strstr((char *)rx_data_sim, "+CMQTTSUB: 0,0") == NULL) {
+    printf("-----------------CMQTTSUB %s Fail------------------\n", topic);
+    return false;
   }
-  if (is_at_subcribe_topic_mqtt == true) {
-    send_to_simcom_a76xx("AT+CMQTTSUB=0\r\n");
-    HAL_Delay(500);
-    if (strstr((char *)rx_data_sim, "+CMQTTSUB: 0,0") != NULL) {
-      printf("-----------------Subscribe Success !------------------\n");
-      is_at_subcribe_mqtt = true;
-    } else {
-      printf("-----------------Subscribe Fail !------------------\n");
-      is_at_subcribe_mqtt = false;
-      return false;
-    }
+  printf("-----------------Subscribed %s------------------\n", topic);
+  return true;
+}
+
+bool subscribe_mqtt_via_gsm(void) {
+#if SIMCOM_MODEL == a7080
+  snprintf(array_at_command, sizeof(array_at_command), "AT+SMSUB=\"%s\",1\r\n",
+           MQTT_TOPIC_RPC_REQUEST);
+  send_to_simcom_a76xx(array_at_command);
+  HAL_Delay(3000);
+  if (strstr((char *)rx_data_sim, "OK") == NULL) {
+    return false;
+  }
+  memset(rx_data_sim, '\0', RX_BUFFER_UART1);
+  snprintf(array_at_command, sizeof(array_at_command), "AT+SMSUB=\"%s\",1\r\n",
+           MQTT_TOPIC_OTA_ATTRIBUTES);
+  send_to_simcom_a76xx(array_at_command);
+  HAL_Delay(3000);
+  is_at_subcribe_mqtt = strstr((char *)rx_data_sim, "OK") != NULL;
+#else
+  is_at_subcribe_topic_mqtt =
+      subscribe_a76xx_topic(MQTT_TOPIC_RPC_REQUEST) &&
+      subscribe_a76xx_topic(MQTT_TOPIC_OTA_ATTRIBUTES);
+  is_at_subcribe_mqtt = is_at_subcribe_topic_mqtt;
+#endif
+  if (!is_at_subcribe_mqtt) {
+    return false;
   }
   HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, SET);
   return true;
-#endif
 }
 
 bool publish_mqtt_via_gsm(void) {
