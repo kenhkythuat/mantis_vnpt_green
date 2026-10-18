@@ -11,6 +11,9 @@
 #define OTA_UART_CAPTURE_SIZE 768U
 #define OTA_HTTP_READ_CHUNK   256U
 #define OTA_HTTP_READ_RETRIES 3U
+#define OTA_HTTP_RX_QUIET_MS  20U
+#define OTA_HTTP_BODY_TIMEOUT_MS    30000U
+#define OTA_HTTP_TRAILER_TIMEOUT_MS 1000U
 #define OTA_MANIFEST_MAX_SIZE 600U
 
 extern UART_HandleTypeDef huart1;
@@ -115,13 +118,33 @@ static int32_t capture_find(const char *needle) {
   return -1;
 }
 
+static bool capture_has_modem_error(void) {
+  uint16_t used = s_uart_capture_len;
+
+  /* Compare bytes directly so the OTA image does not embed the complete
+   * modem error marker that legacy firmware mistakes for an HTTP body error. */
+  if (used < 9U) {
+    return false;
+  }
+  for (uint16_t i = 0U; i <= (uint16_t)(used - 9U); i++) {
+    if (s_uart_capture[i] == '\r' && s_uart_capture[i + 1U] == '\n' &&
+        s_uart_capture[i + 2U] == 'E' && s_uart_capture[i + 3U] == 'R' &&
+        s_uart_capture[i + 4U] == 'R' && s_uart_capture[i + 5U] == 'O' &&
+        s_uart_capture[i + 6U] == 'R' && s_uart_capture[i + 7U] == '\r' &&
+        s_uart_capture[i + 8U] == '\n') {
+      return true;
+    }
+  }
+  return false;
+}
+
 static bool wait_for_text(const char *text, uint32_t timeout_ms) {
   uint32_t started = HAL_GetTick();
   while ((HAL_GetTick() - started) < timeout_ms) {
     if (capture_find(text) >= 0) {
       return true;
     }
-    if (capture_find("\r\nERROR\r\n") >= 0) {
+    if (capture_has_modem_error()) {
       return false;
     }
     watchdog_feed();
@@ -153,7 +176,7 @@ static void http_terminate_if_active(void) {
   started = HAL_GetTick();
   while ((HAL_GetTick() - started) < 1500U) {
     if (capture_find("\r\nOK\r\n") >= 0 ||
-        capture_find("\r\nERROR\r\n") >= 0) {
+        capture_has_modem_error()) {
       break;
     }
     watchdog_feed();
@@ -380,11 +403,17 @@ static bool parse_httpread_header(uint16_t *body_at, uint16_t *body_length) {
 
 static bool http_read_binary(uint32_t offset, uint16_t requested,
                              uint8_t *output, uint16_t *received) {
+  uint32_t read_errors_before = s_uart_error_count;
+
   for (uint8_t attempt = 1U; attempt <= OTA_HTTP_READ_RETRIES; attempt++) {
     uint32_t started;
     uint16_t body_at = 0U;
     uint16_t body_length = 0U;
+    uint16_t capture_length = 0U;
+    bool header_found = false;
     bool body_complete = false;
+    bool uart_error = false;
+    uint32_t rx_changed_at;
     uint32_t body_complete_at = 0U;
     uint32_t errors_before = s_uart_error_count;
 
@@ -394,37 +423,82 @@ static bool http_read_binary(uint32_t offset, uint16_t requested,
     capture_begin();
     send_to_simcom_a76xx(array_at_command);
     started = HAL_GetTick();
-    while ((HAL_GetTick() - started) < 15000U) {
-      if (parse_httpread_header(&body_at, &body_length) && body_length > 0U &&
-          s_uart_capture_len >= (uint16_t)(body_at + body_length)) {
-        body_complete = true;
-        if (body_complete_at == 0U) {
-          body_complete_at = HAL_GetTick();
-        }
+    rx_changed_at = started;
+    while (true) {
+      uint32_t now = HAL_GetTick();
+      uint16_t current_capture_length = s_uart_capture_len;
+      if (current_capture_length != capture_length) {
+        capture_length = current_capture_length;
+        rx_changed_at = now;
       }
-      if (body_complete && (HAL_GetTick() - body_complete_at) >= 3U) {
+      if (s_uart_error_count != errors_before) {
+        uart_error = true;
+      }
+      header_found = parse_httpread_header(&body_at, &body_length);
+      if (header_found && body_length > 0U && body_length == requested &&
+          body_at <= (uint16_t)(UINT16_MAX - body_length) &&
+          capture_length >= (uint16_t)(body_at + body_length)) {
+        if (!body_complete) {
+          body_complete_at = now;
+        }
+        body_complete = true;
+      }
+      /* STM32F1 stalls instruction fetch briefly while programming flash.
+       * Do not start a flash write until the complete HTTP response, including
+       * a delayed trailer, has stopped arriving on USART1. */
+      if (body_complete && !uart_error &&
+          (now - rx_changed_at) >= OTA_HTTP_RX_QUIET_MS) {
+        uint32_t elapsed = now - started;
         memcpy(output, &s_uart_capture[body_at], body_length);
         *received = body_length;
         capture_end();
+        if (elapsed >= 1000U) {
+          printf("[OTA] HTTPREAD slow offset=%lu completed in %lums\r\n",
+                 (unsigned long)offset, (unsigned long)elapsed);
+        }
         return true;
       }
-      if (capture_find("\r\nERROR\r\n") >= 0) {
+      /* Firmware is arbitrary binary and may itself contain "\r\nERROR\r\n".
+       * Once a valid +HTTPREAD data header exists, that byte sequence belongs
+       * to the body and must not be interpreted as a modem response. */
+      if (uart_error ||
+          (!header_found && capture_has_modem_error())) {
+        break;
+      }
+      /* Body timeout applies only until all requested bytes are present. A
+       * body that finishes near that deadline still gets its own trailer/idle
+       * window instead of being incorrectly rejected. */
+      if ((!body_complete &&
+           (now - started) >= OTA_HTTP_BODY_TIMEOUT_MS) ||
+          (body_complete &&
+           (now - body_complete_at) >= OTA_HTTP_TRAILER_TIMEOUT_MS)) {
         break;
       }
       watchdog_feed();
       HAL_Delay(1U);
     }
     capture_end();
-    printf("[OTA] HTTPREAD %u/%u failed offset=%lu captured=%u errors=%lu\r\n",
-           attempt, OTA_HTTP_READ_RETRIES, (unsigned long)offset,
-           s_uart_capture_len,
-           (unsigned long)(s_uart_error_count - errors_before));
+    printf("[OTA] HTTPREAD %u/%u failed offset=%lu requested=%u "
+           "captured=%u header=%u body=%u complete=%u errors=%lu "
+           "elapsed=%lums\r\n",
+           attempt, OTA_HTTP_READ_RETRIES, (unsigned long)offset, requested,
+           s_uart_capture_len, header_found ? 1U : 0U, body_length,
+           body_complete ? 1U : 0U,
+           (unsigned long)(s_uart_error_count - errors_before),
+           (unsigned long)(HAL_GetTick() - started));
     if (attempt < OTA_HTTP_READ_RETRIES) {
       HAL_Delay(250U);
     }
   }
-  printf("[OTA] HTTPREAD failed offset=%lu last UART error=0x%08lX\r\n",
-         (unsigned long)offset, (unsigned long)s_uart_last_error);
+  if (s_uart_error_count != read_errors_before) {
+    printf("[OTA] HTTPREAD failed offset=%lu UART errors=%lu last=0x%08lX\r\n",
+           (unsigned long)offset,
+           (unsigned long)(s_uart_error_count - read_errors_before),
+           (unsigned long)s_uart_last_error);
+  } else {
+    printf("[OTA] HTTPREAD failed offset=%lu without a new UART error\r\n",
+           (unsigned long)offset);
+  }
   return false;
 }
 

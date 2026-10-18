@@ -191,6 +191,12 @@ static void pause_non_ota_io(void) {
   ota_tim6_was_running = (htim6.Instance->CR1 & TIM_CR1_CEN) != 0U;
   to_send_status_to_server = 0;
   HAL_TIM_Base_Stop_IT(&htim6);
+  __HAL_TIM_CLEAR_FLAG(&htim6, TIM_FLAG_UPDATE);
+  HAL_NVIC_ClearPendingIRQ(TIM6_IRQn);
+  /* USART1 is the only active data path during OTA and must preempt all
+   * remaining interrupts while receiving binary HTTP chunks. */
+  HAL_NVIC_SetPriority(USART1_IRQn, 0U, 0U);
+  printf("[OTA] non-OTA I/O paused; USART1 priority=0\r\n");
 }
 
 static void resume_non_ota_io(void) {

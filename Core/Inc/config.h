@@ -14,7 +14,7 @@
 
 // Codename of the farm, where we deploy this node to.
 
-#define VERSION_MANTIS "1.1"
+#define VERSION_MANTIS "1.2"
 
 /* OTA release settings. Replace the URL with the deployed HTTPS manifest. */
 #define OTA_ENABLE 1
@@ -32,7 +32,7 @@
 
 #define SIMCOM_MODEL a7680 // #default is a7670 if you use model other please choose enter your model
 #define SAVE_LOAD false
-#define INTERVAL_PUPLISH_DATA 10 // the time the device sends data to the server
+#define INTERVAL_PUPLISH_DATA 15 // the time the device sends data to the server
 #define CHECK_TIME_AFTER_MQTT_RESTART 50  //UNITS IN SECONDS
 #define NUMBER_LOADS 5
 #define RX_BUFFER_UART1 (NUMBER_LOADS*150)

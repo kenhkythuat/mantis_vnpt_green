@@ -1,8 +1,8 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "device": "mantis-stm32f103ret6",
   "app_addr": "0x08008000",
-  "size": 59840,
-  "crc32": "0xB9BEE279",
-  "bin_url": "https://raw.githubusercontent.com/kenhkythuat/mantis_vnpt_green/refs/heads/feature/connect_server_VNPT/ota/mantis_v1.1.bin"
+  "size": 61344,
+  "crc32": "0xB22305D3",
+  "bin_url": "https://raw.githubusercontent.com/kenhkythuat/mantis_vnpt_green/refs/heads/feature/connect_server_VNPT/ota/mantis_v1.2.bin"
 }
