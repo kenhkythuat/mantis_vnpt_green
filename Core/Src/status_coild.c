@@ -10,7 +10,7 @@
 #include "ota_layout.h"
 #include "stdio.h"
 
-#define FLASH_START_ADDR OTA_CONFIG_ADDR
+#define FLASH_START_ADDR OTA_RELAY_CONFIG_ADDR
 
 int read_status;
 uint8_t status_loads;

@@ -6,10 +6,20 @@ $buildDir = Join-Path $repoRoot "Bootloader\build"
 
 if ([string]::IsNullOrWhiteSpace($ToolchainBin)) {
     $gccCommand = Get-Command arm-none-eabi-gcc.exe -ErrorAction SilentlyContinue
+    if ($null -eq $gccCommand -and (Test-Path -LiteralPath "C:\ST")) {
+        $gccCommand = Get-ChildItem -LiteralPath "C:\ST" `
+            -Filter arm-none-eabi-gcc.exe -File -Recurse -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+    }
     if ($null -eq $gccCommand) {
         throw "arm-none-eabi-gcc.exe not found; pass -ToolchainBin."
     }
-    $ToolchainBin = Split-Path -Parent $gccCommand.Source
+    $gccPath = $gccCommand.Source
+    if ([string]::IsNullOrWhiteSpace($gccPath)) {
+        $gccPath = $gccCommand.FullName
+    }
+    $ToolchainBin = Split-Path -Parent $gccPath
 }
 
 $gcc = Join-Path $ToolchainBin "arm-none-eabi-gcc.exe"
@@ -19,7 +29,8 @@ New-Item -ItemType Directory -Force -Path $buildDir | Out-Null
 
 $common = @(
     "-mcpu=cortex-m3", "-mthumb", "-Os", "-ffunction-sections",
-    "-fdata-sections", "-Wall", "-Wextra", "-DSTM32F103xE",
+    "-fdata-sections", "-ffreestanding", "-fno-builtin", "-Wall", "-Wextra",
+    "-DSTM32F103xE",
     "-I$repoRoot\Core\Inc",
     "-I$repoRoot\Drivers\CMSIS\Device\ST\STM32F1xx\Include",
     "-I$repoRoot\Drivers\CMSIS\Include"

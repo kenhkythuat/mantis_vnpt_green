@@ -5,6 +5,7 @@
  *      Author: thuanphat7
  */
 #include "cJSON.h"
+#include "device_config.h"
 #include "stdbool.h"
 #include "stdio.h"
 #include "stdlib.h"
@@ -27,6 +28,14 @@ bool is_at_stop_mqtt = false;
 bool is_inital_check = false;
 uint16_t count_errors = 0;
 int timeout_pb_done = 60000;
+
+static const device_config_t *require_device_config(void) {
+  const device_config_t *config = device_config_get();
+  if (config == NULL) {
+    printf("[CONFIG] factory configuration is missing or invalid\r\n");
+  }
+  return config;
+}
 
 int read_signal_quality(void) {
   send_to_simcom_a76xx("AT+CSQ\r\n");
@@ -91,6 +100,10 @@ bool check_signal_simcom(void) {
 }
 
 bool enable_mqtt_on_gsm_modem(void) {
+  const device_config_t *config = require_device_config();
+  if (config == NULL) {
+    return false;
+  }
   is_enable_mqtt = false;
 #if SIMCOM_MODEL == a7080
   send_to_simcom_a76xx("AT+CNACT=0,1\r\n");
@@ -102,13 +115,15 @@ bool enable_mqtt_on_gsm_modem(void) {
   send_to_simcom_a76xx("AT+SMCONF=\"KEEPTIME\",600\r\n");
   HAL_Delay(400);
   sprintf(array_at_command, "AT+SMCONF=\"CLIENTID\",\"%s\"\r\n",
-          MQTT_CLIENT_ID);
+          config->mqtt_client_id);
   send_to_simcom_a76xx(array_at_command);
   HAL_Delay(400);
-  sprintf(array_at_command, "AT+SMCONF=\"USERNAME\",\"%s\"\r\n", MQTT_USER);
+  sprintf(array_at_command, "AT+SMCONF=\"USERNAME\",\"%s\"\r\n",
+          config->mqtt_user);
   send_to_simcom_a76xx(array_at_command);
   HAL_Delay(400);
-  sprintf(array_at_command, "AT+SMCONF=\"PASSWORD\",\"%s\"\r\n", MQTT_PASS);
+  sprintf(array_at_command, "AT+SMCONF=\"PASSWORD\",\"%s\"\r\n",
+          config->mqtt_pass);
   send_to_simcom_a76xx(array_at_command);
   HAL_Delay(400);
   send_to_simcom_a76xx("AT+SMCONF=\"CLEANSS\",1\r\n");
@@ -140,9 +155,14 @@ bool enable_mqtt_on_gsm_modem(void) {
 }
 
 bool acquire_gsm_mqtt_client(void) {
+  const device_config_t *config = require_device_config();
+  if (config == NULL) {
+    return false;
+  }
   is_acquiered_mqtt = false;
   printf("-----------------acquire_gsm_mqtt_client------------------\n");
-  sprintf(array_at_command, "+CMQTTACCQ: 0,\"%s\",0\r\n", MQTT_CLIENT_ID);
+  sprintf(array_at_command, "+CMQTTACCQ: 0,\"%s\",0\r\n",
+          config->mqtt_client_id);
   send_to_simcom_a76xx("AT+CMQTTACCQ?\r\n");
   HAL_Delay(400);
   if (strstr((char *)rx_data_sim, array_at_command) != NULL) {
@@ -153,10 +173,12 @@ bool acquire_gsm_mqtt_client(void) {
     is_at_acquier_mqtt = false;
   }
   if (is_at_acquier_mqtt == false) {
-    sprintf(array_at_command, "AT+CMQTTACCQ=0,\"%s\",0\r\n", MQTT_CLIENT_ID);
+    sprintf(array_at_command, "AT+CMQTTACCQ=0,\"%s\",0\r\n",
+            config->mqtt_client_id);
     send_to_simcom_a76xx(array_at_command);
     HAL_Delay(200);
-    sprintf(array_at_command, "+CMQTTACCQ: 0,\"%s\",0", MQTT_CLIENT_ID);
+    sprintf(array_at_command, "+CMQTTACCQ: 0,\"%s\",0",
+            config->mqtt_client_id);
     HAL_Delay(200);
     if (strstr((char *)rx_data_sim, "OK") != NULL) {
       printf("-----------------Acquire Successfully------------------\n");
@@ -170,9 +192,13 @@ bool acquire_gsm_mqtt_client(void) {
 }
 
 bool connect_mqtt_server_by_gsm(void) {
+  const device_config_t *config = require_device_config();
+  if (config == NULL) {
+    return false;
+  }
   is_connected_mqtt = false;
   sprintf(array_at_command, "+CMQTTCONNECT: 0,\"%s:%d\",60,1,\"%s\",\"%s\"\r\n",
-          MQTT_HOST, MQTT_PORT, MQTT_USER, MQTT_PASS);
+          MQTT_HOST, MQTT_PORT, config->mqtt_user, config->mqtt_pass);
   HAL_Delay(200);
   send_to_simcom_a76xx("AT+CMQTTCONNECT?\r\n");
   HAL_Delay(200);
@@ -187,7 +213,7 @@ bool connect_mqtt_server_by_gsm(void) {
   if (is_at_connect_mqtt == false) {
     sprintf(array_at_command,
             "AT+CMQTTCONNECT=0,\"%s:%d\",60,1,\"%s\",\"%s\"\r\n", MQTT_HOST,
-            MQTT_PORT, MQTT_USER, MQTT_PASS);
+            MQTT_PORT, config->mqtt_user, config->mqtt_pass);
     send_to_simcom_a76xx(array_at_command);
     HAL_Delay(2000);
     if (strstr((char *)rx_data_sim, "+CMQTTCONNECT: 0,0") != NULL||strstr((char *)rx_data_sim, "OK") != NULL) {

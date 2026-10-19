@@ -1,7 +1,18 @@
+#include "config.h"
+#include "device_config.h"
 #include "ota_layout.h"
 #include "stm32f103xe.h"
 #include <stdbool.h>
 #include <stdint.h>
+
+typedef char factory_serial_number_must_fit[
+    (sizeof(FACTORY_SERIAL_NUMBER) <= DEVICE_SERIAL_NUMBER_SIZE) ? 1 : -1];
+typedef char factory_mqtt_client_id_must_fit[
+    (sizeof(FACTORY_MQTT_CLIENT_ID) <= DEVICE_MQTT_CLIENT_ID_SIZE) ? 1 : -1];
+typedef char factory_mqtt_user_must_fit[
+    (sizeof(FACTORY_MQTT_USER) <= DEVICE_MQTT_USER_SIZE) ? 1 : -1];
+typedef char factory_mqtt_pass_must_fit[
+    (sizeof(FACTORY_MQTT_PASS) <= DEVICE_MQTT_PASS_SIZE) ? 1 : -1];
 
 __attribute__((naked, noreturn)) static void branch_to_application(
     uint32_t stack_pointer, uint32_t reset_vector) {
@@ -110,6 +121,73 @@ static bool flash_program_halfword(uint32_t address, uint16_t value) {
   return ok && *(const uint16_t *)address == value;
 }
 
+static void bytes_clear(uint8_t *destination, uint32_t length) {
+  for (uint32_t i = 0U; i < length; i++) {
+    destination[i] = 0U;
+  }
+}
+
+static bool string_copy(char *destination, uint32_t capacity,
+                        const char *source) {
+  uint32_t i = 0U;
+  if (capacity == 0U) {
+    return false;
+  }
+  while (source[i] != '\0' && i + 1U < capacity) {
+    destination[i] = source[i];
+    i++;
+  }
+  destination[i] = '\0';
+  return source[i] == '\0' && i > 0U;
+}
+
+static bool provision_factory_config(void) {
+  device_config_t config;
+  const device_config_t *stored =
+      (const device_config_t *)OTA_FACTORY_CONFIG_ADDR;
+
+  if (device_config_is_valid(stored)) {
+    return true;
+  }
+
+  bytes_clear((uint8_t *)&config, sizeof(config));
+  config.magic = DEVICE_CONFIG_MAGIC;
+  config.schema_version = DEVICE_CONFIG_SCHEMA_VERSION;
+  config.struct_size = (uint16_t)sizeof(config);
+  if (!string_copy(config.serial_number, sizeof(config.serial_number),
+                   FACTORY_SERIAL_NUMBER) ||
+      !string_copy(config.mqtt_client_id, sizeof(config.mqtt_client_id),
+                   FACTORY_MQTT_CLIENT_ID) ||
+      !string_copy(config.mqtt_user, sizeof(config.mqtt_user),
+                   FACTORY_MQTT_USER) ||
+      !string_copy(config.mqtt_pass, sizeof(config.mqtt_pass),
+                   FACTORY_MQTT_PASS)) {
+    return false;
+  }
+  config.crc32 = device_config_calculate_crc(&config);
+
+  flash_unlock();
+  if (!flash_erase_page(OTA_FACTORY_CONFIG_ADDR)) {
+    flash_lock();
+    return false;
+  }
+  for (uint32_t offset = 0U; offset < sizeof(config); offset += 2U) {
+    const uint8_t *raw = (const uint8_t *)&config;
+    uint16_t value = raw[offset];
+    if (offset + 1U < sizeof(config)) {
+      value |= (uint16_t)raw[offset + 1U] << 8U;
+    } else {
+      value |= 0xFF00U;
+    }
+    if (!flash_program_halfword(OTA_FACTORY_CONFIG_ADDR + offset, value)) {
+      flash_lock();
+      return false;
+    }
+  }
+  flash_lock();
+  return device_config_is_valid(stored);
+}
+
 static bool install_pending_image(const ota_metadata_t *metadata) {
   uint32_t page_count;
   if (crc32_update(0U, (const uint8_t *)OTA_STAGING_START_ADDR,
@@ -179,6 +257,11 @@ static void jump_to_application(void) {
 int main(void) {
   const ota_metadata_t *metadata =
       (const ota_metadata_t *)OTA_METADATA_ADDR;
+  if (!provision_factory_config()) {
+    while (1) {
+      watchdog_feed();
+    }
+  }
   if (metadata_valid(metadata)) {
     (void)install_pending_image(metadata);
   }

@@ -28,6 +28,7 @@
 #include "string.h"
 #include <math.h>
 #include "config.h"
+#include "device_config.h"
 #include "ota_update.h"
 
 /* USER CODE END Includes */
@@ -359,6 +360,15 @@ int main(void)
   HAL_Delay(500U);
   printf("-----Welcome to Agriconnect-----\n");
   printf("-----Hello Mantis-----\n");
+  {
+    const device_config_t *device_config = device_config_get();
+    if (device_config != NULL) {
+      printf("[CONFIG] factory configuration valid serial=%s client_id=%s\r\n",
+             device_config->serial_number, device_config->mqtt_client_id);
+    } else {
+      printf("[CONFIG] ERROR: flash bootloader with factory settings first\r\n");
+    }
+  }
 #if SAVE_LOAD
   control_vavle_form_flash();
 #endif

@@ -14,7 +14,7 @@
 
 // Codename of the farm, where we deploy this node to.
 
-#define VERSION_MANTIS "1.5"
+#define VERSION_MANTIS "1.6"
 
 /* OTA release settings. Replace the URL with the deployed HTTPS manifest. */
 #define OTA_ENABLE 1
@@ -37,24 +37,16 @@
 #define NUMBER_LOADS 5
 #define RX_BUFFER_UART1 (NUMBER_LOADS*150)
 
+/*
+ * Factory provisioning values. Set these per device, build the bootloader,
+ * then flash it once during production. OTA application images never write
+ * the dedicated factory-config page.
+ */
+#define FACTORY_SERIAL_NUMBER "sw_000007" /* Must be lower case. */
 
-// Serial number. Must be lower case.
-#ifndef SERIAL_NUMBER
-  #define SERIAL_NUMBER "sw_000007"
-#endif
+#define FACTORY_MQTT_USER "dwGTEnDqXGBonvoNoI3B"
+#define FACTORY_MQTT_PASS "WpeW6H8YMLVi9R2qMk8E"
 
-// #define MQTT_USER "node" 		// User - connect to MQTT broker
-// #define MQTT_PASS "654321"		// Password - connect to MQTT broker
-
-//#define MQTT_USER "mqttnode"       // User - connect to MQTT broker
-//#define MQTT_PASS "congamo"		// Password - connect to MQTT broker
-
-#define MQTT_USER "XR8L5hdbGRjbOW9NxtSo"       // User - connect to MQTT broker
-#define MQTT_PASS "65HRrDuBHAHaBJLaFYNv"		// Password - connect to MQTT broker
-
-//#define MQTT_TOPIC_ACTUATOR_STATUS FARM "/sn/" SERIAL_NUMBER "/as/"
-//// MQTT topic to subscribe and get command to switch on/off actuator
-//#define MQTT_TOPIC_ACTUATOR_CONTROL FARM "/snac/" SERIAL_NUMBER "/"
 
 #define MQTT_TOPIC_RPC_REQUEST "v1/devices/me/rpc/request/+"
 #define MQTT_TOPIC_OTA_ATTRIBUTES "v1/devices/me/attributes"
@@ -65,12 +57,9 @@
 /** MQTT
  * Global broker: mqtt.agriconnect.vn
  */
-// #define MQTT_HOST "tcp://mqtt.agriconnect.vn"
-// #define MQTT_CLIENT_ID SERIAL_NUMBER
-// #define MQTT_PORT 1883
 
 #define MQTT_HOST "tcp://iot-hub.vnptgreen.vn"      // MQTT broker
-#define MQTT_CLIENT_ID  "ORxB1GlAS7a100JhRw2F"
+#define FACTORY_MQTT_CLIENT_ID "YvTZfJQnAx2tPz0Rj7y3"
 #define MQTT_PORT 30188
 
 

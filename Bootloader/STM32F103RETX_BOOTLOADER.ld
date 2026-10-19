@@ -1,4 +1,5 @@
-/* Mantis factory bootloader: 0x08000000..0x08007FFF (32 KiB). */
+/* Bootloader code: 0x08000000..0x080077FF (30 KiB).
+ * 0x08007800..0x08007FFF is the factory device-config erase page. */
 ENTRY(Reset_Handler)
 
 _estack = ORIGIN(RAM) + LENGTH(RAM);
@@ -8,7 +9,7 @@ _Min_Stack_Size = 0x400;
 MEMORY
 {
   RAM   (xrw) : ORIGIN = 0x20000000, LENGTH = 64K
-  FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 32K
+  FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 30K
 }
 
 SECTIONS
